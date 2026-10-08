@@ -58,10 +58,13 @@
   svg{width:100%;height:auto;display:block}
   .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
   .foot{font-size:7.4pt;color:var(--mute);margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
+  .cachebar{max-width:210mm;margin:-6px auto 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;font-size:13px;color:var(--mute)}
+  .cachebar button{background:#fff;color:var(--ink);border:1px solid var(--line);padding:6px 12px;font-size:13px}
+  .cachebar button:hover{border-color:var(--acc);color:var(--acc)}
   @page{size:A4;margin:0}
   @media print{
     body{background:#fff}
-    .panel,.lock{display:none!important}
+    .panel,.lock,.cachebar{display:none!important}
     #sheet{margin:0;box-shadow:none;page-break-after:avoid}
   }
 </style>
@@ -97,6 +100,14 @@
   <button id="bPrint" disabled>Imprimer / PDF</button>
   <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
   <div id="status"></div>
+</div>
+
+<div class="cachebar">
+  <span id="cacheInfo">💾 Cache local : 0 commune enregistrée sur cet appareil</span>
+  <button id="bSave">⬇ Enregistrer</button>
+  <button id="bLoad">⬆ Restaurer</button>
+  <button id="bClear">Vider le cache</button>
+  <input type="file" id="fLoad" accept=".json,application/json" style="display:none">
 </div>
 
 <div id="sheet"></div>
@@ -241,7 +252,40 @@ $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 const VARS_T='temperature_2m_mean,temperature_2m_min,temperature_2m_max', VARS_P='precipitation_sum';
 const LOT=4, CACHE='comcom-v3-'+LAST;
 function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
-function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){}}
+function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){} cacheInfo();}
+
+// ---------- Gestion du cache local (3 boutons) ----------
+const cacheKeys=()=>Object.keys(localStorage).filter(k=>k.startsWith('comcom-'));
+function cacheInfo(){
+  let n=0; try{n=cacheKeys().filter(k=>k.startsWith(CACHE+'-')).length;}catch(e){}
+  $('cacheInfo').textContent=`💾 Cache local : ${n} commune${n>1?'s':''} enregistrée${n>1?'s':''} sur cet appareil`;
+}
+$('bSave').onclick=()=>{
+  const o={}; cacheKeys().forEach(k=>o[k]=localStorage.getItem(k));
+  if(!Object.keys(o).length){st('Le cache est vide : rien à enregistrer.');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));
+  a.download=`cache-comcom-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('bLoad').onclick=()=>$('fLoad').click();
+$('fLoad').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const o=JSON.parse(await f.text()); let n=0;
+    Object.entries(o).forEach(([k,v])=>{if(k.startsWith('comcom-')&&typeof v==='string'){localStorage.setItem(k,v);n++;}});
+    LIST.forEach(withCache); if(LIST.length) afficherListe(); cacheInfo();
+    st(`${n} entrée(s) restaurée(s).`);
+  }catch(err){st('Fichier de cache illisible.');}
+  e.target.value='';
+};
+$('bClear').onclick=()=>{
+  if(!confirm('Vider le cache ? Toutes les communes devront être rechargées depuis Open-Meteo.')) return;
+  cacheKeys().forEach(k=>localStorage.removeItem(k));
+  LIST.forEach(c=>{delete c.Y; delete c.alt;});
+  if(LIST.length) afficherListe(); cacheInfo();
+  st('Cache vidé : la prochaine génération rechargera toutes les communes.');
+};
 
 // Agrégats annuels d'une série journalière
 function yearly(d){
@@ -286,6 +330,8 @@ function enCours(label){
   const maj=()=>$('chT').textContent=mmss(Math.floor((Date.now()-t0)/1000));
   maj(); TICK=setInterval(maj,1000);
 }
+
+try{cacheInfo();}catch(e){}
 
 // ---------- Génération par lots ----------
 $('bGo').onclick=async()=>{
