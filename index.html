@@ -57,6 +57,9 @@
   .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   svg{width:100%;height:auto;display:block}
   .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
+  .note{font-size:7.8pt;line-height:1.35;margin-top:8px;padding:6px 8px;background:#f4f7fa;border-left:3px solid var(--acc);border-radius:3px}
+  .note b{color:var(--acc)}
+  .note p{margin:2px 0}
   .foot{font-size:7.4pt;color:var(--mute);margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
   .cachebar{max-width:210mm;margin:-6px auto 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;font-size:13px;color:var(--mute)}
   .cachebar button{background:#fff;color:var(--ink);border:1px solid var(--line);padding:6px 12px;font-size:13px}
@@ -107,6 +110,9 @@
   <button id="bSave">⬇ Enregistrer</button>
   <button id="bLoad">⬆ Restaurer</button>
   <button id="bClear">Vider le cache</button>
+  <span id="mfInfo">📡 Postes Météo-France : aucun</span>
+  <button id="bMf">Charger postes-mf.json</button>
+  <input type="file" id="fMf" accept=".json,application/json" style="display:none">
   <input type="file" id="fLoad" accept=".json,application/json" style="display:none">
 </div>
 
@@ -333,6 +339,60 @@ function enCours(label){
 
 try{cacheInfo();}catch(e){}
 
+// ---------- Postes Météo-France (recalage des précipitations et de la neige) ----------
+// Fichier postes-mf.json produit par preparer-postes-mf.html : cherché à côté de la page,
+// sinon chargé à la main (gardé ensuite dans le navigateur, hors « Vider le cache »).
+let MF=null;
+const MF_KEY='mf-postes';
+function normale(o,a,b,min){const v=[];for(let y=a;y<=b;y++) if(o&&ok(o[y])) v.push(o[y]);return v.length>=min?mean(v):NaN;}
+function setMF(j){
+  MF=j.postes.map(p=>({...p,Pn:normale(p.P,N0,N1,20),Sn:normale(p.S,N0,N1,20),Sr:normale(p.S,R0,LAST,7),Pr:normale(p.P,R0,LAST,7)}))
+             .filter(p=>ok(p.lat)&&ok(p.lon)&&(ok(p.Pn)||ok(p.Sn)));
+  $('mfInfo').textContent=`📡 Postes Météo-France : ${MF.length} (dép. ${j.departements}, ${j.genere})`;
+}
+(async()=>{
+  try{const r=await fetch('postes-mf.json'); if(r.ok){const j=await r.json(); setMF(j); return;}}catch(e){}
+  try{const t=localStorage.getItem(MF_KEY); if(t) setMF(JSON.parse(t));}catch(e){}
+})();
+$('bMf').onclick=()=>$('fMf').click();
+$('fMf').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{const t=await f.text(); setMF(JSON.parse(t)); try{localStorage.setItem(MF_KEY,t);}catch(err){} st('Postes Météo-France chargés : ils serviront au recalage de la prochaine fiche.');}
+  catch(err){st('Fichier postes-mf.json illisible.');}
+  e.target.value='';
+};
+function km(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;
+  const h=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+
+// Recalage : pluie annuelle mesurée par les postes à moins de 30 km, en fonction de l'altitude
+// (droite pluie = a + b × altitude si les postes couvrent au moins 400 m de dénivelé, sinon poste le plus proche).
+// Le rapport pluie mesurée / pluie ERA5 corrige ensuite pluie et neige de chaque commune.
+function recaler(com){
+  if(!MF||!MF.length) return null;
+  const R=30, used=new Map();
+  com.forEach(c=>{
+    const near=MF.filter(p=>ok(p.Pn)).map(p=>({p,d:km(c,p)})).filter(x=>x.d<=R).sort((a,b)=>a.d-b.d);
+    if(!near.length||!ok(c.pN)) return;
+    let Pc, meth;
+    const al=near.map(x=>x.p.alt), span=Math.max(...al)-Math.min(...al);
+    if(near.length>=3&&span>=400){
+      const n=near.length, mx=mean(al), my=mean(near.map(x=>x.p.Pn));
+      let sxy=0,sxx=0; near.forEach(x=>{sxy+=(x.p.alt-mx)*(x.p.Pn-my);sxx+=(x.p.alt-mx)**2;});
+      const b=Math.max(0,sxy/sxx), a=my-b*mx;
+      const alt=Math.min(Math.max(c.alt,Math.min(...al)-300),Math.max(...al)+300);
+      Pc=a+b*alt; meth='grad'; near.forEach(x=>used.set(x.p.id,x.p));
+    }else{ Pc=near[0].p.Pn; meth='proche'; used.set(near[0].p.id,near[0].p); }
+    const k=Math.min(2.5,Math.max(0.4,Pc/c.pN));
+    c.k=k; c.meth=meth; c.pN*=k; c.pR*=k; c.sN*=k; c.sR*=k;
+  });
+  if(!com.some(c=>c.k)) return null;
+  // Postes à présenter : les plus proches du centre du territoire ayant une mesure de neige si possible
+  const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
+  const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=R)
+    .sort((a,b)=>(ok(b.Sn)-ok(a.Sn))||a.d-b.d).slice(0,5).sort((a,b)=>a.alt-b.alt);
+  return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste};
+}
+
 // ---------- Génération par lots ----------
 $('bGo').onclick=async()=>{
   $('bGo').disabled=true; $('bPrint').disabled=true;
@@ -360,12 +420,13 @@ $('bGo').onclick=async()=>{
     }else{
       const com=JOB.com.map(c=>{
         const Y=c.Y;
-        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),sN:avg(Y,N0,N1,'s'),sR:avg(Y,R0,LAST,'s'),
+        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),pR:avg(Y,R0,LAST,'p'),sN:avg(Y,N0,N1,'s'),sR:avg(Y,R0,LAST,'s'),
           gN:avg(Y,N0,N1,'gel'),gR:avg(Y,R0,LAST,'gel'),hR:avg(Y,R0,LAST,'chaud')};
       });
       com.forEach(c=>c.dT=c.tR-c.tN);
       com.sort((a,b)=>a.alt-b.alt);
-      chronoStop(); render(JOB.nom,com);
+      const cal=recaler(com);
+      chronoStop(); render(JOB.nom,com,cal);
       $('bGo').textContent='Générer la fiche';
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
@@ -409,7 +470,7 @@ function scatter(com){
 }
 
 // ---------- Rendu de la fiche ----------
-function render(nom,com){
+function render(nom,com,cal){
   const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
   const terr=years.map(y=>mean(com.map(c=>c.Y[y]&&c.Y[y].t)));
   const tN=mean(terr.slice(0,N1-N0+1)), tR=mean(terr.slice(R0-N0));
@@ -417,9 +478,14 @@ function render(nom,com){
   const uniq=[...new Map(com.map(c=>[c.insee,c])).values()];
   const nbC=uniq.length, pop=uniq.reduce((s,c)=>s+c.pop,0);
   const alts=com.map(c=>c.alt), sN=mean(com.map(c=>c.sN)), sR=mean(com.map(c=>c.sR));
+  // Précipitations du secteur (identiques pour les communes d'une même maille : on en donne la moyenne)
+  const pN=mean(com.map(c=>c.pN)), pR=mean(com.map(c=>c.pR)), dP=(pR/pN-1)*100;
+  const basse=com[0], haute=com[com.length-1];
+  const dS=c=>(c.sR/c.sN-1)*100;
+  const sgn=v=>(v>=0?'+':'−')+f0(Math.abs(v));
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
-  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td><td>${f0(c.pN)}</td><td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
   $('sheet').innerHTML=`
     <h1>${nom}</h1>
     <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
@@ -431,7 +497,7 @@ function render(nom,com){
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
     <table>
-      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th><th>Pluie+neige /an (mm)*</th><th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th></tr>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th></tr>
       ${rows}
     </table>
     <div class="charts">
@@ -440,8 +506,19 @@ function render(nom,com){
       <div><h2>Température selon l'altitude</h2>${scatter(com)}
         <div class="cap">Chaque point est une commune (normale 1991–2020). Environ −0,5 à −0,6 °C par 100 m en montagne.</div></div>
     </div>
-    <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au centre de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km). Communes : geo.api.gouv.fr.<br>
-      * Précipitations : moyenne du secteur (maille), sans correction d'altitude. Neige : cumul de neige fraîche estimé à partir des précipitations et de la température locale (neige sous 0 °C, pluie au-dessus de 2 °C, 1 mm d'eau ≈ 1 cm de neige) ; il ne s'agit pas de l'épaisseur au sol.<br>
+    ${cal?`<h2>Mesures des postes Météo-France proches</h2>
+    <table>
+      <tr><th>Poste</th><th>Alt. (m)</th><th>Distance (km)</th><th>Pluie+neige /an normale (mm)</th><th>Neige fraîche /an normale (cm)</th><th>Neige fraîche /an ${R0}–${LAST} (cm)</th></tr>
+      ${cal.liste.map(p=>`<tr><td>${p.nom}</td><td>${f0(p.alt)}</td><td>${f0(p.d)}</td><td>${f0(p.Pn)}</td><td>${f0(p.Sn)}</td><td>${f0(p.Sr)}</td></tr>`).join('')}
+    </table>`:''}
+    <div class="note">
+      <p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>
+      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 30 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée.</p>`
+      :`<p><b>Pourquoi la neige augmente-t-elle avec l'altitude ?</b> Les précipitations proviennent d'une maille d'environ 25 km : la même quantité d'eau est retenue pour toutes les communes du secteur, soit ${f0(pN)} mm par an en moyenne (1991–2020). Seule la température change avec l'altitude : plus haut, une plus grande part de cette eau tombe en neige. En réalité, il tombe aussi plus d'eau en altitude : les valeurs des communes hautes sont plutôt sous-estimées, celles des communes basses plutôt surestimées.</p>`}
+      <p><b>Pourquoi la neige ne baisse-t-elle pas partout malgré le réchauffement ?</b> Sur ${R0}–${LAST}, les précipitations du secteur ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale. ${dP>0?`En altitude, où il fait encore assez froid, ce surplus d'eau tombe en neige et compense le réchauffement de ${f1(tR-tN)} °C. `:''}Résultat : ${sgn(dS(basse))} % de neige à ${basse.nom} (${f0(basse.alt)} m), ${sgn(dS(haute))} % à ${haute.nom} (${f0(haute.alt)} m). Dix années restent une période courte : une ou deux saisons très neigeuses suffisent à faire varier fortement la moyenne.</p>
+    </div>
+    <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au centre de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
+      * Neige estimée : voir l'encadré ci-dessus.<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
   fitA4();
