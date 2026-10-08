@@ -65,6 +65,8 @@
   .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
   #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
   #sugg button{color:var(--live);border-color:var(--hairline);padding:5px 10px;font-size:11.5px}
+  #sugg #aOk{background:var(--live);color:#0b1622;border-color:var(--live);font-size:13px;font-weight:700;padding:8px 16px}
+  #sugg #aOk:hover{box-shadow:0 0 0 3px rgba(126,228,184,.25)}
   #chrono{width:100%;display:none;align-items:center;gap:10px}
   #chrono.on{display:flex}
   #chrono b{font:600 22px/1 'IBM Plex Mono',monospace;color:var(--live);min-width:64px;font-variant-numeric:tabular-nums}
@@ -111,6 +113,7 @@
   .pagefoot .contact{display:inline-block;margin-top:12px;color:var(--live);text-decoration:none;border:1px solid var(--hairline);border-radius:8px;padding:5px 12px}
   .pagefoot .contact:hover{border-color:var(--live)}
   .pagefoot .copy{margin-top:14px;font-size:11px;opacity:.6}
+  #sheet,#sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact}  /* couleurs gardées à l'impression */
   @page{size:A4;margin:0}
   @media print{
     body{background:#fff}
@@ -296,7 +299,7 @@ $('bAdd').onclick=async()=>{
         <b>${p.nom}</b> (${p.insee}) · Nom affiché <input id="aNom" value="${p.nom}" size="22">
         Altitude <input id="aAlt" type="number" min="-10" max="4810" step="1" value="${dem}" style="width:80px"> m
         <span style="color:var(--mute)">(par défaut : chef-lieu, ${dem} m)</span>
-        <button id="aOk">Ajouter</button> <span class="lnk" id="aNo">annuler</span></div>`;
+        <button id="aOk">✓ Ajouter à la liste</button> <span class="lnk" id="aNo">annuler</span></div>`;
       $('aNo').onclick=()=>{$('sugg').innerHTML='';};
       $('aOk').onclick=()=>{
         const alt=Math.round(+$('aAlt').value), nom=$('aNom').value.trim()||p.nom;
@@ -319,10 +322,11 @@ $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 
 // ---------- Données qualité de l'air (CAMS Europe via Open-Meteo) ----------
 // Une requête par commune (heure par heure, 3 années complètes) ; 4 communes par clic.
-// Seuls des agrégats MENSUELS sont gardés dans le navigateur : rien n'est rechargé deux fois.
+// Les valeurs JOURNALIÈRES (≈ 25 Ko par commune) sont gardées dans le navigateur : rien n'est rechargé deux fois,
+// et le recalage sur les stations peut être refait à chaque fiche.
 const A0=LAST-2;                                  // période : 3 dernières années complètes
 const VARS='pm2_5,pm10,nitrogen_dioxide,ozone,european_aqi';
-const LOT=4, CACHE='comair-v1-'+A0+'-'+LAST;
+const LOT=4, CACHE='comair-v2-'+A0+'-'+LAST;
 function cacheGet(k){try{return JSON.parse(localStorage.getItem(CACHE+'-'+k));}catch(e){return null;}}
 function cacheSet(k,v){try{localStorage.setItem(CACHE+'-'+k,JSON.stringify(v));}catch(e){} cacheInfo();}
 // Indice européen (EEA) : classes de 20 en 20 ; libellés alignés sur la fiche communale
@@ -369,35 +373,52 @@ $('bClear').onclick=()=>{
   st('Cache vidé : la prochaine génération rechargera toutes les communes.');
 };
 
-// Agrégation : heures → jours → mois.  M['AAAA-MM'] = {n, pm25, pm10, no2, o3, aqi (sommes de valeurs journalières),
-// c:[jours par classe], d25, d10, dno2, do3 (jours au-dessus des seuils OMS), do3ue (O3 > 120), dom:{polluant: jours}}
-function agreger(h){
+// Agrégation 1 : heures → jours, stockés sous forme compacte
+// D = {d0:'AAAA-MM-JJ', pm25:[], pm10:[], no2:[], o3:[] (max 8 h), aqi:[] (max horaire)} ; null = journée incomplète
+function journalier(h){
   const T=h.time, n=T.length, o3=h.ozone;
-  // moyenne glissante 8 h de l'ozone (heure t = moyenne des heures t-7…t)
   const o8=new Array(n).fill(NaN);
   for(let i=7;i<n;i++){let s=0,k=0;for(let j=i-7;j<=i;j++) if(ok(o3[j])){s+=o3[j];k++;} if(k>=6) o8[i]=s/k;}
-  const D={};
+  const D={d0:T[0].slice(0,10),pm25:[],pm10:[],no2:[],o3:[],aqi:[]};
+  let cur=null,acc=null;
+  const flush=()=>{ if(!acc) return;
+    const r=v=>v===null||!isFinite(v)?null:Math.round(v*10)/10;
+    const okj=acc.pm25.length>=18&&acc.aqi>=0;
+    D.pm25.push(okj?r(mean(acc.pm25)):null); D.pm10.push(okj?r(mean(acc.pm10)):null); D.no2.push(okj?r(mean(acc.no2)):null);
+    D.o3.push(okj&&acc.o8>=0?r(acc.o8):null); D.aqi.push(okj?r(acc.aqi):null); };
   for(let i=0;i<n;i++){
-    const d=T[i].slice(0,10), o=D[d]=D[d]||{pm25:[],pm10:[],no2:[],o8:-1,aqi:-1};
-    if(ok(h.pm2_5[i])) o.pm25.push(h.pm2_5[i]);
-    if(ok(h.pm10[i])) o.pm10.push(h.pm10[i]);
-    if(ok(h.nitrogen_dioxide[i])) o.no2.push(h.nitrogen_dioxide[i]);
-    if(ok(o8[i])&&o8[i]>o.o8) o.o8=o8[i];
-    if(ok(h.european_aqi[i])&&h.european_aqi[i]>o.aqi) o.aqi=h.european_aqi[i];
+    const d=T[i].slice(0,10);
+    if(d!==cur){flush(); cur=d; acc={pm25:[],pm10:[],no2:[],o8:-1,aqi:-1};}
+    if(ok(h.pm2_5[i])) acc.pm25.push(h.pm2_5[i]);
+    if(ok(h.pm10[i])) acc.pm10.push(h.pm10[i]);
+    if(ok(h.nitrogen_dioxide[i])) acc.no2.push(h.nitrogen_dioxide[i]);
+    if(ok(o8[i])&&o8[i]>acc.o8) acc.o8=o8[i];
+    if(ok(h.european_aqi[i])&&h.european_aqi[i]>acc.aqi) acc.aqi=h.european_aqi[i];
   }
+  flush(); return D;
+}
+const jour=(D,i)=>{const t=new Date(D.d0+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+i); return t.toISOString().slice(0,10);};
+// Moyenne annuelle brute (modèle) d'un polluant, pour comparer aux stations
+function annuel(D,p){const Y={};D[p].forEach((v,i)=>{if(v===null)return;const y=jour(D,i).slice(0,4);(Y[y]=Y[y]||[]).push(v);});
+  const o={};Object.entries(Y).forEach(([y,a])=>{if(a.length>=300)o[y]=mean(a);});return o;}
+// Agrégation 2 : jours → mois, avec facteurs de recalage f={pm25,pm10,no2} (1 = valeurs du modèle)
+// M['AAAA-MM'] = {n, pm25, pm10, no2, o3, aqi, c:[jours par classe], d25, d10, dno2, do3, do3ue, dom:{polluant: jours}}
+function mensuel(D,f){
+  f=f||{pm25:1,pm10:1,no2:1};
   const M={};
-  Object.entries(D).forEach(([d,o])=>{
-    if(o.pm25.length<18||o.aqi<0) return;            // journée trop incomplète
-    const m=d.slice(0,7), a=M[m]=M[m]||{n:0,pm25:0,pm10:0,no2:0,o3:0,no3:0,aqi:0,c:[0,0,0,0,0,0],d25:0,d10:0,dno2:0,do3:0,do3ue:0,dom:{pm25:0,pm10:0,no2:0,o3:0}};
-    const v={pm25:mean(o.pm25),pm10:mean(o.pm10),no2:mean(o.no2),o3:o.o8>=0?o.o8:NaN};
-    a.n++; a.pm25+=v.pm25; a.pm10+=v.pm10; a.no2+=v.no2; a.aqi+=o.aqi;
+  for(let i=0;i<D.aqi.length;i++){
+    if(D.aqi[i]===null) continue;
+    const m=jour(D,i).slice(0,7), a=M[m]=M[m]||{n:0,pm25:0,pm10:0,no2:0,o3:0,no3:0,aqi:0,c:[0,0,0,0,0,0],d25:0,d10:0,dno2:0,do3:0,do3ue:0,dom:{pm25:0,pm10:0,no2:0,o3:0}};
+    const v={pm25:D.pm25[i]*f.pm25,pm10:D.pm10[i]*f.pm10,no2:D.no2[i]*f.no2,o3:D.o3[i]===null?NaN:D.o3[i]};
+    // Classe du jour : celle du modèle, relevée si les valeurs recalées la dépassent
+    let aqi=D.aqi[i]; ['pm25','pm10','no2'].forEach(p=>{if(f[p]>1) aqi=Math.max(aqi,sous(v[p],BP[p]));});
+    a.n++; a.pm25+=v.pm25; a.pm10+=v.pm10; a.no2+=v.no2; a.aqi+=aqi;
     if(ok(v.o3)){a.o3+=v.o3;a.no3++; if(v.o3>OMS.o3h8) a.do3++; if(v.o3>UE.o3h8) a.do3ue++;}
-    const cl=aqCls(o.aqi); a.c[cl]++;
+    const cl=aqCls(aqi); a.c[cl]++;
     if(v.pm25>OMS.pm25j) a.d25++; if(v.pm10>OMS.pm10j) a.d10++; if(v.no2>OMS.no2j) a.dno2++;
     if(cl>=2){ let best='pm25',bv=-1; POL.forEach(p=>{const x=sous(v[p],BP[p]); if(x>bv){bv=x;best=p;}}); a.dom[best]++; }
-  });
-  Object.values(M).forEach(a=>['pm25','pm10','no2','aqi'].forEach(k=>a[k]=+(a[k]/a.n).toFixed(2)));
-  Object.values(M).forEach(a=>{a.o3=a.no3?+(a.o3/a.no3).toFixed(2):NaN; delete a.no3;});
+  }
+  Object.values(M).forEach(a=>{['pm25','pm10','no2','aqi'].forEach(k=>a[k]=a[k]/a.n); a.o3=a.no3?a.o3/a.no3:NaN; delete a.no3;});
   return M;
 }
 // Synthèse d'une commune sur la période : moyennes annuelles et nombre de jours par an
@@ -450,40 +471,101 @@ async function radon(insee){
   return NaN;
 }
 
+// ---------- Stations de mesure (statistiques annuelles officielles, Agence européenne pour l'environnement) ----------
+// Une requête par fiche : stations situées dans le rectangle des communes (+ marge), années de la période.
+const EEA='https://air.discomap.eea.europa.eu/arcgis/rest/services/AirQuality/AQ_Statistics_WM/MapServer/0/query';
+const RST=20;                                   // rayon d'influence d'une station (km)
+let STA=null, STA_KEY='';
+async function chargerStations(com){
+  const la=com.map(c=>c.lat), lo=com.map(c=>c.lon), m=0.2;
+  const box=[Math.min(...lo)-m,Math.min(...la)-m,Math.max(...lo)+m,Math.max(...la)+m].map(v=>v.toFixed(2));
+  const key=box.join(','); if(STA&&STA_KEY===key) return STA;
+  const where=`YearOfStatistics>=${A0} AND YearOfStatistics<=${LAST} AND DataCoverage>=75`;
+  const out='AirQualityStation,StationName,AirPollutant,YearOfStatistics,DataAggregationProcess,AirPollutionLevel,TypeOfMeasurementStation,AreaOfMeasurementStation,LatitudeOfMeasurementStation,LongitudeOfMeasurementStation';
+  const url=`${EEA}?where=${encodeURIComponent(where)}&geometry=${key}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=${out}&returnGeometry=false&resultRecordCount=1000&f=json`;
+  const r=await fetch(url); if(!r.ok) throw new Error('EEA HTTP '+r.status);
+  const j=await r.json(); if(j.error) throw new Error('EEA : '+(j.error.message||'erreur'));
+  const S={};
+  (j.features||[]).forEach(({attributes:a})=>{
+    const id=a.AirQualityStation; if(!id) return;
+    const s=S[id]=S[id]||{id,nom:a.StationName,type:a.TypeOfMeasurementStation,zone:a.AreaOfMeasurementStation,
+      lat:+a.LatitudeOfMeasurementStation,lon:+a.LongitudeOfMeasurementStation,mes:{}};
+    const pol={'NO2':'no2','PM10':'pm10','PM2.5':'pm25','O3':'o3'}[a.AirPollutant]; if(!pol) return;
+    const agg=a.DataAggregationProcess;
+    const k=agg==='P1Y'?pol:(pol==='o3'&&agg==='P1Y-dmaxAbove120')?'o3j':(pol==='pm10'&&agg==='P1Y-daysAbove50')?'pm10j':null;
+    if(!k) return; (s.mes[k]=s.mes[k]||{})[a.YearOfStatistics]=a.AirPollutionLevel;
+  });
+  STA=Object.values(S).filter(s=>ok(s.lat)&&ok(s.lon)&&Object.keys(s.mes).length&&com.some(c=>km(c,s)<=RST));
+  STA.forEach(s=>{s.fond=/background/i.test(s.type); s.insee='st-'+s.id; s.Y=(cacheGet('st-'+s.id)||{}).Y;});
+  await altitudes(STA); STA.forEach(s=>s.alt=s.altDem);
+  STA_KEY=key; return STA;
+}
+function km(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;
+  const h=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+// Rapport mesure / modèle à chaque station de fond, sur les années où les deux existent
+function rapports(st){
+  st.k={};
+  ['no2','pm10','pm25'].forEach(p=>{
+    const M=st.mes[p], C=st.Y?annuel(st.Y,p):{}; if(!M) return;
+    const ys=Object.keys(M).filter(y=>ok(C[y])&&C[y]>0); if(!ys.length) return;
+    st.cams=st.cams||{}; st.cams[p]=mean(ys.map(y=>C[y])); st.moy=st.moy||{}; st.moy[p]=mean(ys.map(y=>M[y]));
+    st.k[p]=Math.min(5,Math.max(0.5,st.moy[p]/st.cams[p]));
+  });
+  if(!st.k.pm25&&st.k.pm10){st.k.pm25=st.k.pm10; st.pm25estime=true;}   // pas de PM2,5 mesurées : on suit les PM10
+}
+// Facteur appliqué à une commune : station de fond la plus proche (≤ 20 km), pleinement jusqu'à 200 m
+// au-dessus de la station, puis de moins en moins jusqu'à 1 000 m au-dessus (l'air d'altitude échappe aux inversions)
+function facteurs(c,st){
+  const f={pm25:1,pm10:1,no2:1};
+  const s=st.filter(x=>x.fond&&x.k&&Object.keys(x.k).length).map(x=>({x,d:km(c,x)})).filter(o=>o.d<=RST).sort((a,b)=>a.d-b.d)[0];
+  if(!s) return {f,st:null};
+  const dz=ok(c.alt)&&ok(s.x.alt)?c.alt-s.x.alt:0, w=dz<=200?1:dz>=1000?0:1-(dz-200)/800;
+  Object.keys(f).forEach(p=>{if(s.x.k[p]) f[p]=1+w*(s.x.k[p]-1);});
+  return {f,st:s.x,w,d:s.d};
+}
+
 // ---------- Génération par lots ----------
 $('bGo').onclick=async()=>{
   $('bGo').disabled=true; $('bPrint').disabled=true;
   const JOB={nom:$('titre').value.trim()||"Qualité de l'air", com:LIST.filter(c=>c.on)};
   try{
-    const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
+    // Stations de mesure proches (une seule requête) ; les stations de fond sont chargées comme des communes
+    let stations=[];
+    try{ st('Stations de mesure…'); stations=await chargerStations(JOB.com); }catch(err){ stations=[]; console.warn(err); }
+    JOB.charge=[...JOB.com,...stations.filter(s=>s.fond)];
+    const todo=JOB.charge.filter(c=>!c.Y), lot=todo.slice(0,LOT);
     for(let i=0;i<lot.length;i++){
-      const c=lot[i], n=JOB.com.length-todo.length+i+1;
-      st(`Qualité de l'air : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
+      const c=lot[i], n=JOB.charge.length-todo.length+i+1;
+      st(`Qualité de l'air : ${c.insee.startsWith('st-')?'station '+c.nom:c.nom} (${n}/${JOB.charge.length})…`); enCours('Chargement en cours');
       const j=await getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${c.lat}&longitude=${c.lon}&hourly=${VARS}&domains=cams_europe&start_date=${A0}-01-01&end_date=${LAST}-12-31&timezone=Europe%2FParis`);
       if(!j.hourly||!j.hourly.european_aqi||!j.hourly.european_aqi.some(ok)) throw new Error('données de qualité de l\'air absentes pour '+c.nom);
-      c.Y=agreger(j.hourly); cacheSet(cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
+      c.Y=journalier(j.hourly); cacheSet(c.insee.startsWith('st-')?c.insee:cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
     }
-    const reste=JOB.com.filter(c=>!c.Y).length;
+    const reste=JOB.charge.filter(c=>!c.Y).length;
     if(reste){
-      const fait=JOB.com.length-reste;
+      const fait=JOB.charge.length-reste;
       $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
-      st(`${fait}/${JOB.com.length} communes chargées. Pause imposée par Open-Meteo avant le lot suivant.`);
+      st(`${fait}/${JOB.charge.length} points chargés (communes et stations). Pause imposée par Open-Meteo avant le lot suivant.`);
       attente(65,'avant le lot suivant');
     }else{
       st('Zonage radon…'); enCours('Radon');
       const ins=[...new Set(JOB.com.map(c=>c.insee))], R={};
       await Promise.all(ins.map(async k=>R[k]=await radon(k)));
-      const com=JOB.com.map(c=>({...c,alt:ok(c.altFix)?c.altFix:ok(c.alt)?c.alt:c.altDem,S:synthese(c.Y),rad:R[c.insee]})).filter(c=>c.S);
+      stations.forEach(rapports);
+      const com=JOB.com.map(c=>{
+        const alt=ok(c.altFix)?c.altFix:ok(c.alt)?c.alt:c.altDem, F=facteurs({...c,alt},stations), M=mensuel(c.Y,F.f);
+        return {...c,alt,F,M,S:synthese(M),rad:R[c.insee]};
+      }).filter(c=>c.S);
       if(!com.length) throw new Error('aucune donnée exploitable sur la période');
       com.sort((a,b)=>a.alt-b.alt);
-      chronoStop(); render(JOB.nom,com);
+      chronoStop(); render(JOB.nom,com,stations);
       $('bGo').textContent='Générer la fiche';
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
   }catch(e){
-    const fait=JOB.com.filter(c=>c.Y).length;
+    const L=JOB.charge||JOB.com, fait=L.filter(c=>c.Y).length;
     $('bGo').textContent='Continuer';
-    st(`Pause : ${e.message}.`+` (${fait}/${JOB.com.length} communes chargées)`);
+    st(`Pause : ${e.message}.`+` (${fait}/${L.length} points chargés)`);
     chronoStop();
     if(/minute/.test(e.message)) attente(65,'quota minute');
     else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
@@ -499,7 +581,7 @@ function damier(com){
   for(let y=A0;y<=LAST;y++){
     h+=`<tr><td class="y">${y}</td>`;
     for(let m=1;m<=12;m++){
-      const k=`${y}-${String(m).padStart(2,'0')}`, L=com.map(c=>c.Y[k]).filter(a=>a&&a.n>=20);
+      const k=`${y}-${String(m).padStart(2,'0')}`, L=com.map(c=>c.M[k]).filter(a=>a&&a.n>=20);
       if(!L.length){h+='<td style="background:#eef1f4"></td>';continue;}
       const aqi=mean(L.map(a=>a.aqi)), bad=mean(L.map(a=>a.c[2]+a.c[3]+a.c[4]+a.c[5]));
       h+=`<td style="background:${AQ.col[aqCls(aqi)]}" title="${AQ.lab[aqCls(aqi)]}">${Math.round(bad)||''}</td>`;
@@ -512,7 +594,7 @@ function damier(com){
 function saisons(com){
   const W=340,H=165,L=30,R=8,T=10,B=20;
   const S=[['pm25','PM2,5','#7d2181'],['pm10','PM10','#d4553a'],['no2','NO₂','#2f6487'],['o3','O₃ (max 8 h)','#e0a400']];
-  const V={}; S.forEach(([k])=>V[k]=[...Array(12)].map((_,m)=>mean(com.flatMap(c=>{const r=[];for(let y=A0;y<=LAST;y++){const a=c.Y[`${y}-${String(m+1).padStart(2,'0')}`];if(a&&a.n>=20)r.push(a[k]);}return r;}))));
+  const V={}; S.forEach(([k])=>V[k]=[...Array(12)].map((_,m)=>mean(com.flatMap(c=>{const r=[];for(let y=A0;y<=LAST;y++){const a=c.M[`${y}-${String(m+1).padStart(2,'0')}`];if(a&&a.n>=20)r.push(a[k]);}return r;}))));
   const hi=Math.ceil(Math.max(...S.flatMap(([k])=>V[k].filter(ok)))/20)*20||20;
   const x=i=>L+i*(W-L-R)/11, y=v=>T+(hi-v)*(H-T-B)/hi;
   let s=`<svg viewBox="0 0 ${W} ${H}" font-size="8" fill="#5d6b7a">`;
@@ -524,7 +606,8 @@ function saisons(com){
 }
 
 // ---------- Rendu de la fiche ----------
-function render(nom,com){
+function render(nom,com,stations){
+  stations=stations||[];
   const uniq=[...new Map(com.map(c=>[c.insee,c])).values()];
   const nbC=uniq.length, pop=uniq.reduce((s,c)=>s+c.pop,0), alts=com.map(c=>c.alt);
   const T=k=>mean(com.map(c=>c.S[k]));
@@ -539,13 +622,26 @@ function render(nom,com){
   const radOk=com.some(c=>ok(c.rad)), r3=uniq.filter(c=>c.rad===3);
   const cls=(v,a)=>v>a?'hot':'';
   const now=new Date(), per=`${A0}–${LAST}`;
+  // Stations affichées : les plus proches du territoire, avec au moins une mesure
+  const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
+  const stL=stations.map(s=>({...s,d:km(ctr,s)})).sort((a,b)=>(b.fond-a.fond)||a.d-b.d).slice(0,5);
+  const recal=com.filter(c=>c.F&&c.F.st), refs=[...new Set(recal.map(c=>c.F.st))];
+  const moyMes=(s,p)=>s.moy&&ok(s.moy[p])?s.moy[p]:(s.mes[p]?mean(Object.values(s.mes[p])):NaN);
+  const xk=(s,p)=>s.k&&s.k[p]&&!(p==='pm25'&&s.pm25estime)?` <span style="color:var(--mute)">(modèle ${f1(s.cams[p])})</span>`:'';
+  const stTable=stL.length?`<h2>Stations de mesure à proximité</h2>
+    <table>
+      <tr><th>Station</th><th>Type</th><th>Distance (km)</th><th>Alt. (m)</th><th>NO₂ moy. mesuré (µg/m³)</th><th>PM10 moy. mesuré (µg/m³)</th><th>PM2,5 moy. mesuré (µg/m³)</th><th>Jours /an ozone &gt; 120 mesurés</th></tr>
+      ${stL.map(s=>`<tr><td>${s.nom}</td><td>${s.fond?'fond':'trafic'}${/urban/i.test(s.zone)&&!/sub/i.test(s.zone)?' urbain':/sub/i.test(s.zone)?' périurbain':' rural'}</td><td>${f0(s.d)}</td><td>${f0(s.alt)}</td>
+        <td>${f1(moyMes(s,'no2'))}${xk(s,'no2')}</td><td>${f1(moyMes(s,'pm10'))}${xk(s,'pm10')}</td><td>${f1(moyMes(s,'pm25'))}${xk(s,'pm25')}</td><td>${s.mes.o3j?f0(mean(Object.values(s.mes.o3j))):'–'}</td></tr>`).join('')}
+    </table>`:'';
+  const ratioTxt=s=>['no2','pm10','pm25'].filter(p=>s.k&&s.k[p]&&!(p==='pm25'&&s.pm25estime)).map(p=>`${{no2:'NO₂',pm10:'PM10',pm25:'PM2,5'}[p]} × ${f1(s.k[p])}`).join(', ');
   const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td>
     <td class="${cls(c.S.pm25,OMS.pm25a)}">${f1(c.S.pm25)}</td><td class="${cls(c.S.pm10,OMS.pm10a)}">${f1(c.S.pm10)}</td><td class="${cls(c.S.no2,OMS.no2a)}">${f1(c.S.no2)}</td>
     <td>${f0(c.S.d25)}</td><td>${f0(c.S.do3)}</td><td>${f0(c.S.c[2]+c.S.c[3]+c.S.c[4]+c.S.c[5])}</td>
     ${radOk?`<td class="${c.rad===3?'r3':''}">${ok(c.rad)?c.rad:'–'}</td>`:''}</tr>`).join('');
   $('sheet').innerHTML=`
     <h1>${nom}</h1>
-    <div class="sub">Qualité de l'air · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m · période ${per}</div>
+    <div class="sub">Qualité de l'air${refs.length?' · recalée sur les mesures':''} · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m · période ${per}</div>
     <div class="kpis">
       <div class="kpi"><b>${f0(bons)} %</b><span>des jours avec un air bon ou moyen (indice européen)</span></div>
       <div class="kpi"><b style="color:var(--warm)">${f0(degr)} j</b><span>par an avec un air dégradé ou pire</span></div>
@@ -558,6 +654,7 @@ function render(nom,com){
         <th>Jours /an PM2,5 &gt; 15</th><th>Jours /an ozone &gt; 100</th><th>Jours /an air dégradé ou pire</th>${radOk?'<th>Potentiel radon (1 à 3)</th>':''}</tr>
       ${rows}
     </table>
+    ${stTable}
     <div class="charts">
       <div><h2>Mois par mois, ${per}</h2>${damier(com)}
         <div class="cap">Couleur : qualité moyenne de l'air du mois. Chiffre : nombre de jours dégradés ou pires.</div></div>
@@ -566,11 +663,14 @@ function render(nom,com){
     </div>
     <div class="note">
       <p><b>Comment lire ?</b> Les valeurs en rouge dépassent la valeur guide annuelle de l'OMS (2021), plus protectrice que les limites réglementaires européennes actuelles (PM2,5 : 25 µg/m³, PM10 : 40, NO₂ : 40 ; abaissées en 2030 à 10, 20 et 20). L'indice européen classe chaque jour selon le polluant le plus élevé : bon, moyen, dégradé, mauvais, très mauvais.</p>
-      <p><b>Deux saisons, deux pollutions.</b> En hiver, les particules fines sont ${ok(hiver)&&ok(ete)&&ete>0?`${f1(hiver/ete)} fois plus élevées qu'en été`:'plus élevées'} : chauffage, notamment au bois, et inversions de température qui piègent l'air froid et les polluants en fond de vallée. En été, l'ozone domine${ok(o3ete)&&ok(o3hiv)?` (${f0(o3ete)} µg/m³ contre ${f0(o3hiv)} en hiver)`:''} : il se forme au soleil à partir des gaz d'échappement et voyage loin ; il est souvent plus élevé en altitude et à la campagne qu'en ville.</p>
-      <p><b>Limites.</b> Ces valeurs viennent du modèle européen CAMS, avec une maille d'environ 11 km : des communes voisines ont des valeurs proches, et les pics locaux (fond de vallée étroit, bord de route, cheminées) sont lissés. En hiver, les particules en fond de vallée sont probablement sous-estimées. Pour une valeur de référence locale, voir les stations de mesure d'Atmo Auvergne-Rhône-Alpes.</p>
+      <p><b>Deux saisons, deux pollutions.</b> ${ok(hiver)&&ok(ete)&&ete>0&&hiver/ete>=1.2
+        ?`En hiver, les particules fines sont ${f1(hiver/ete)} fois plus élevées qu'en été : chauffage, notamment au bois, et inversions de température qui piègent l'air froid et les polluants en fond de vallée.`
+        :`En hiver, le chauffage (notamment au bois) et les inversions de température piègent les particules en fond de vallée. Le modèle n'en montre pourtant presque rien ici (${ok(hiver)?f1(hiver):'–'} µg/m³ en hiver contre ${ok(ete)?f1(ete):'–'} en été) : avec sa maille de 11 km, il ne « voit » pas ces vallées étroites. C'est la principale limite de cette fiche.`} En été, l'ozone domine${ok(o3ete)&&ok(o3hiv)?` (${f0(o3ete)} µg/m³ contre ${f0(o3hiv)} en hiver)`:''} : il se forme au soleil à partir des gaz d'échappement et voyage loin ; il est souvent plus élevé en altitude et à la campagne qu'en ville.</p>
+      ${refs.length?`<p><b>Valeurs recalées sur les mesures.</b> Le modèle a été comparé ${refs.length>1?'aux stations de fond':'à la station de fond'} ${refs.map(s=>`${s.nom} (${ratioTxt(s)})`).join(' et ')} : écart moyen mesure / modèle sur ${per}. Ce rapport est appliqué aux ${recal.length} commune${recal.length>1?'s':''} situées à moins de ${RST} km, pleinement en fond de vallée puis de moins en moins avec l'altitude (au-delà de 1 000 m au-dessus de la station, l'air échappe en général aux inversions de température).${refs.some(s=>s.pm25estime)?' Faute de mesure des PM2,5, elles suivent la correction des PM10.':''} La correction est annuelle : elle ne reconstitue pas les pics d'un hiver particulier. L'ozone n'est pas recalé ; voir le tableau des stations.</p>`:''}
+      <p><b>Limites.</b> ${refs.length?'Sans recalage, ces':'Ces'} valeurs viennent du modèle européen CAMS, avec une maille d'environ 11 km : des communes voisines ont des valeurs proches, et les pics locaux (fond de vallée étroit, bord de route, cheminées) sont lissés. En hiver, les particules en fond de vallée sont probablement sous-estimées. Pour une valeur de référence locale, voir les stations de mesure d'Atmo Auvergne-Rhône-Alpes.</p>
       ${radOk?`<p><b>Radon.</b> Gaz radioactif naturel issu du sous-sol, il s'accumule dans les bâtiments mal ventilés. ${r3.length?`${r3.length} commune${r3.length>1?'s sont':' est'} en potentiel 3 (significatif) : une mesure dans les habitations y est recommandée, et obligatoire dans les établissements recevant du public comme les écoles.`:'Aucune commune de la fiche n\'est en potentiel 3 (significatif).'}</p>`:''}
     </div>
-    <div class="foot">Données : modèle CAMS Europe (Copernicus / ECMWF, maille ≈ 11 km) via Open-Meteo, au chef-lieu de chaque commune, ${per} ; indice européen de qualité de l'air (Agence européenne pour l'environnement) ; seuils OMS 2021.${radOk?' Radon : zonage officiel ASNR (arrêté du 27 juin 2018) via Géorisques.':''} Communes : geo.api.gouv.fr.<br>
+    <div class="foot">Données : modèle CAMS Europe (Copernicus / ECMWF, maille ≈ 11 km) via Open-Meteo, au chef-lieu de chaque commune, ${per} ; indice européen de qualité de l'air (Agence européenne pour l'environnement) ; seuils OMS 2021.${stL.length?' Stations : statistiques annuelles officielles (Agence européenne pour l\'environnement, réseau Atmo Auvergne-Rhône-Alpes).':''}${radOk?' Radon : zonage officiel ASNR (arrêté du 27 juin 2018) via Géorisques.':''} Communes : geo.api.gouv.fr.<br>
       Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
   fitA4();
