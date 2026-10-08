@@ -28,6 +28,10 @@
   .top h1{font-family:'Fraunces',serif;font-weight:600;font-style:italic;font-size:clamp(28px,4vw,40px);margin:0 0 6px;letter-spacing:-.01em;color:var(--text-hi)}
   .top .subtitle{color:var(--text-lo);font-size:14px;max-width:62ch}
   /* Écran de mot de passe */
+  .toprow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .toprow .eyebrow{margin-bottom:0}
+  .navlink{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--live);text-decoration:none;border:1px solid var(--hairline);border-radius:8px;padding:6px 12px;background:var(--bg-card);transition:border-color .15s}
+  .navlink:hover{border-color:var(--live)}
   .lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9}
   .lock form{background:var(--bg-card);border:1px solid var(--hairline);padding:24px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:10px;width:290px}
   .lock strong{font-family:'Fraunces',serif;font-style:italic;font-size:20px}
@@ -129,7 +133,10 @@
 </div>
 
 <header class="top">
+  <div class="toprow">
   <div class="eyebrow"><span class="pulse"></span>comparateur-meteo · qualité de l'air</div>
+    <a class="navlink" href="index.html">🌡️ Fiche climat →</a>
+  </div>
   <h1>Qualité de l'air intercommunale</h1>
   <div class="subtitle">Toutes les communes d'une intercommunalité sur une page A4 : particules fines, dioxyde d'azote, ozone et radon, comparés aux seuils de l'OMS.</div>
 </header>
@@ -178,9 +185,14 @@ const PW_HASH = '77656a756e7b9e3ea3f369b084aa261129db5876d4649438daaf92123750552
 async function sha256(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 document.getElementById('lockForm').onsubmit=async e=>{
   e.preventDefault();
-  if(await sha256(document.getElementById('pw').value)===PW_HASH) document.getElementById('lock').remove();
+  if(await sha256(document.getElementById('pw').value)===PW_HASH){
+    try{sessionStorage.setItem('comcom-acces',PW_HASH);}catch(err){}
+    document.getElementById('lock').remove();
+  }
   else document.getElementById('pwErr').textContent='Mot de passe incorrect';
 };
+// Mot de passe demandé une seule fois par session, pour passer d'une fiche à l'autre
+try{if(sessionStorage.getItem('comcom-acces')===PW_HASH) document.getElementById('lock').remove();}catch(err){}
 
 // ---------- Outils ----------
 const $=id=>document.getElementById(id);
