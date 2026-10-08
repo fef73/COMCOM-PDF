@@ -1,1 +1,240 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche climat intercommunale</title>
+<style>
+  :root{--ink:#1d2733;--mute:#5d6b7a;--line:#d8dee5;--acc:#1f5f99;--warm:#c8452c;--cold:#2b7bbf;--bg:#eef2f6;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);}
+  .lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9}
+  .lock form{background:#fff;padding:24px;border-radius:10px;box-shadow:0 2px 12px #0002;display:flex;flex-direction:column;gap:10px;width:280px}
+  .lock input,.panel input,.panel select{padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px}
+  button{padding:8px 14px;border:0;border-radius:6px;background:var(--acc);color:#fff;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  .err{color:var(--warm);font-size:13px;min-height:1em}
+  .panel{max-width:210mm;margin:16px auto;background:#fff;padding:16px;border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .panel .grow{flex:1;min-width:200px}
+  #status{width:100%;font-size:13px;color:var(--mute)}
+  /* Fiche A4 */
+  #sheet{width:210mm;min-height:297mm;margin:0 auto 24px;background:#fff;padding:12mm 13mm;display:none}
+  #sheet.on{display:block}
+  h1{font-size:20pt;margin:0;color:var(--acc)}
+  .sub{color:var(--mute);font-size:9.5pt;margin:2px 0 10px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .kpi{border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  .kpi b{display:block;font-size:15pt}
+  .kpi span{font-size:8pt;color:var(--mute)}
+  h2{font-size:11pt;margin:10px 0 4px;color:var(--acc);border-bottom:1px solid var(--line);padding-bottom:2px}
+  table{width:100%;border-collapse:collapse;font-size:8.3pt}
+  th,td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:7.6pt;color:var(--mute);font-weight:600;vertical-align:bottom;white-space:normal}
+  td.hot{color:var(--warm);font-weight:600}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  svg{width:100%;height:auto;display:block}
+  .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
+  .foot{font-size:7.4pt;color:var(--mute);margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
+  @page{size:A4;margin:0}
+  @media print{
+    body{background:#fff}
+    .panel,.lock{display:none!important}
+    #sheet{margin:0;box-shadow:none;page-break-after:avoid}
+  }
+</style>
+</head>
+<body>
 
+<div class="lock" id="lock">
+  <form id="lockForm">
+    <strong>Fiche climat intercommunale</strong>
+    <input type="password" id="pw" placeholder="Mot de passe" autofocus>
+    <button>Entrer</button>
+    <div class="err" id="pwErr"></div>
+  </form>
+</div>
+
+<div class="panel">
+  <input class="grow" id="q" placeholder="Nom de la communauté de communes" value="Cœur de Maurienne Arvan">
+  <button id="bSearch">Rechercher</button>
+  <select id="epci" class="grow" style="display:none"></select>
+  <button id="bGo" disabled>Générer la fiche</button>
+  <button id="bPrint" disabled>Imprimer / PDF</button>
+  <div id="status"></div>
+</div>
+
+<div id="sheet"></div>
+
+<script>
+// ---------- Accès (barrière légère, mot de passe haché) ----------
+const PW_HASH = '77656a756e7b9e3ea3f369b084aa261129db5876d4649438daaf92123750552e';
+async function sha256(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+document.getElementById('lockForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(await sha256(document.getElementById('pw').value)===PW_HASH) document.getElementById('lock').remove();
+  else document.getElementById('pwErr').textContent='Mot de passe incorrect';
+};
+
+// ---------- Outils ----------
+const $=id=>document.getElementById(id);
+const st=t=>$('status').textContent=t;
+const ok=v=>v!==null&&v!==undefined&&!isNaN(v);
+const mean=a=>{const b=a.filter(ok);return b.length?b.reduce((s,x)=>s+x,0)/b.length:NaN;};
+const f1=v=>ok(v)?v.toFixed(1).replace('.',','):'–';
+const f0=v=>ok(v)?Math.round(v).toLocaleString('fr-FR'):'–';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function getJSON(url,tries=4){
+  for(let i=0;i<tries;i++){
+    const r=await fetch(url);
+    if(r.ok) return r.json();
+    if(r.status===429||r.status>=500){await sleep(4000*(i+1));continue;}
+    throw new Error('HTTP '+r.status);
+  }
+  throw new Error('Service indisponible (trop de requêtes), réessayez dans une minute');
+}
+const LAST = new Date().getFullYear()-1;      // dernière année complète
+const N0=1991, N1=2020;                         // normales
+const R0=LAST-9;                                 // décennie récente
+
+// ---------- Recherche de l'intercommunalité ----------
+$('bSearch').onclick=async()=>{
+  st('Recherche…');
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis?nom=${encodeURIComponent($('q').value)}&fields=nom,code,population&limit=15`);
+    if(!l.length){st('Aucune intercommunalité trouvée.');return;}
+    $('epci').innerHTML=l.map(e=>`<option value="${e.code}">${e.nom}</option>`).join('');
+    $('epci').style.display=''; $('bGo').disabled=false; st(l.length+' résultat(s).');
+  }catch(e){st('Erreur : '+e.message);}
+};
+$('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
+$('bPrint').onclick=()=>window.print();
+
+// ---------- Données climat (ERA5 via Open-Meteo, plusieurs points par requête) ----------
+const VARS='temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum,snowfall_sum';
+async function fetchClimate(pts){
+  const out=[], B=4;
+  for(let i=0;i<pts.length;i+=B){
+    const g=pts.slice(i,i+B);
+    st(`Données climatiques : communes ${i+1} à ${i+g.length} sur ${pts.length}…`);
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${g.map(p=>p.lat).join(',')}&longitude=${g.map(p=>p.lon).join(',')}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&timezone=Europe%2FParis`;
+    let j=await getJSON(url); if(!Array.isArray(j)) j=[j];
+    out.push(...j);
+    if(i+B<pts.length) await sleep(1500);
+  }
+  return out;
+}
+
+// Agrégats annuels d'une série journalière
+function yearly(d){
+  const Y={};
+  d.time.forEach((t,i)=>{
+    const y=+t.slice(0,4), o=Y[y]=Y[y]||{t:[],p:0,s:0,gel:0,chaud:0};
+    const tm=d.temperature_2m_mean[i], tn=d.temperature_2m_min[i], tx=d.temperature_2m_max[i];
+    if(ok(tm)) o.t.push(tm);
+    if(ok(d.precipitation_sum[i])) o.p+=d.precipitation_sum[i];
+    if(ok(d.snowfall_sum[i])) o.s+=d.snowfall_sum[i];
+    if(ok(tn)&&tn<0) o.gel++;
+    if(ok(tx)&&tx>=30) o.chaud++;
+  });
+  Object.values(Y).forEach(o=>o.t=mean(o.t));
+  return Y;
+}
+function avg(Y,a,b,k){const v=[];for(let y=a;y<=b;y++) if(Y[y]) v.push(Y[y][k]);return mean(v);}
+
+// ---------- Génération ----------
+$('bGo').onclick=async()=>{
+  $('bGo').disabled=true; $('bPrint').disabled=true;
+  try{
+    const code=$('epci').value, nom=$('epci').selectedOptions[0].text;
+    st('Liste des communes…');
+    const com=(await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`))
+      .filter(c=>c.centre).map(c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1]}));
+    const cl=await fetchClimate(com);
+    com.forEach((c,i)=>{
+      const Y=yearly(cl[i].daily);
+      c.alt=cl[i].elevation; c.Y=Y;
+      c.tN=avg(Y,N0,N1,'t'); c.tR=avg(Y,R0,LAST,'t'); c.dT=c.tR-c.tN;
+      c.pN=avg(Y,N0,N1,'p'); c.sN=avg(Y,N0,N1,'s'); c.sR=avg(Y,R0,LAST,'s');
+      c.gN=avg(Y,N0,N1,'gel'); c.gR=avg(Y,R0,LAST,'gel'); c.hR=avg(Y,R0,LAST,'chaud');
+    });
+    com.sort((a,b)=>a.alt-b.alt);
+    render(nom,com);
+    $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
+  }catch(e){st('Erreur : '+e.message);}
+  $('bGo').disabled=false;
+};
+
+// ---------- Graphiques SVG ----------
+function lineChart(years,vals,normal,unit){
+  const W=340,H=170,L=30,R=8,T=10,B=22;
+  const v=vals.filter(ok), lo=Math.floor(Math.min(...v,normal)-.3), hi=Math.ceil(Math.max(...v,normal)+.3);
+  const x=i=>L+i*(W-L-R)/(years.length-1), y=t=>T+(hi-t)*(H-T-B)/(hi-lo);
+  let s=`<svg viewBox="0 0 ${W} ${H}" font-size="8" fill="#5d6b7a">`;
+  for(let t=lo;t<=hi;t++) s+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="#eef1f4"/><text x="${L-4}" y="${y(t)+3}" text-anchor="end">${t}${unit}</text>`;
+  years.forEach((yr,i)=>{if(yr%5===0) s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${yr}</text>`;});
+  s+=`<line x1="${L}" x2="${W-R}" y1="${y(normal)}" y2="${y(normal)}" stroke="#1f5f99" stroke-dasharray="4 3"/>`;
+  years.forEach((yr,i)=>{if(ok(vals[i])) s+=`<rect x="${x(i)-3}" width="6" y="${Math.min(y(vals[i]),y(normal))}" height="${Math.abs(y(vals[i])-y(normal))}" fill="${vals[i]>=normal?'#c8452c':'#2b7bbf'}" opacity=".85"/>`;});
+  // moyenne glissante 5 ans
+  const mm=vals.map((_,i)=>i<4?NaN:mean(vals.slice(i-4,i+1)));
+  s+=`<polyline fill="none" stroke="#1d2733" stroke-width="1.4" points="${mm.map((m,i)=>ok(m)?`${x(i)},${y(m)}`:'').join(' ')}"/>`;
+  return s+'</svg>';
+}
+function scatter(com){
+  const W=340,H=170,L=30,R=8,T=10,B=22;
+  const a=com.map(c=>c.alt), t=com.map(c=>c.tN);
+  const a0=Math.floor(Math.min(...a)/250)*250, a1=Math.ceil(Math.max(...a)/250)*250;
+  const t0=Math.floor(Math.min(...t)), t1=Math.ceil(Math.max(...t));
+  const x=v=>L+(v-a0)*(W-L-R)/(a1-a0||1), y=v=>T+(t1-v)*(H-T-B)/(t1-t0||1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" font-size="8" fill="#5d6b7a">`;
+  for(let v=t0;v<=t1;v++) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#eef1f4"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v}°</text>`;
+  for(let v=a0;v<=a1;v+=250) s+=`<text x="${x(v)}" y="${H-8}" text-anchor="middle">${v} m</text>`;
+  com.forEach(c=>s+=`<circle cx="${x(c.alt)}" cy="${y(c.tN)}" r="3.2" fill="#1f5f99" opacity=".8"><title>${c.nom}</title></circle>`);
+  return s+'</svg>';
+}
+
+// ---------- Rendu de la fiche ----------
+function render(nom,com){
+  const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
+  const terr=years.map(y=>mean(com.map(c=>c.Y[y]&&c.Y[y].t)));
+  const tN=mean(terr.slice(0,N1-N0+1)), tR=mean(terr.slice(R0-N0));
+  const pop=com.reduce((s,c)=>s+c.pop,0);
+  const alts=com.map(c=>c.alt), sN=mean(com.map(c=>c.sN)), sR=mean(com.map(c=>c.sR));
+  const hottest=years[terr.indexOf(Math.max(...terr))];
+  const now=new Date();
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td><td>${f0(c.pN)}</td><td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
+  $('sheet').innerHTML=`
+    <h1>${nom}</h1>
+    <div class="sub">Fiche climat intercommunale · ${com.length} communes · ${f0(pop)} habitants · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
+    <div class="kpis">
+      <div class="kpi"><b>${f1(tN)} °C</b><span>Température moyenne du territoire, normale 1991–2020</span></div>
+      <div class="kpi"><b style="color:var(--warm)">+${f1(tR-tN)} °C</b><span>Écart ${R0}–${LAST} par rapport à la normale</span></div>
+      <div class="kpi"><b>${f0((sR/sN-1)*100)} %</b><span>Évolution des chutes de neige ${R0}–${LAST} vs normale</span></div>
+      <div class="kpi"><b>${hottest}</b><span>Année la plus chaude depuis ${N0}</span></div>
+    </div>
+    <h2>Les communes, de la plus basse à la plus haute</h2>
+    <table>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th><th>Pluie+neige /an (mm)</th><th>Neige /an normale (cm)</th><th>Neige /an ${R0}–${LAST} (cm)</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th></tr>
+      ${rows}
+    </table>
+    <div class="charts">
+      <div><h2>Température annuelle du territoire</h2>${lineChart(years,terr,tN,'°')}
+        <div class="cap">Barres : écart de chaque année à la normale 1991–2020 (pointillés). Trait noir : moyenne sur 5 ans.</div></div>
+      <div><h2>Température selon l'altitude</h2>${scatter(com)}
+        <div class="cap">Chaque point est une commune (normale 1991–2020). Environ −0,5 à −0,6 °C par 100 m en montagne.</div></div>
+    </div>
+    <div class="foot">Données : réanalyse ERA5 (Copernicus / ECMWF) via Open-Meteo, au centre de chaque commune, avec correction d'altitude. Communes : geo.api.gouv.fr.
+      La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
+  $('sheet').classList.add('on');
+  fitA4();
+}
+
+// Réduit légèrement la fiche si elle dépasse une page A4
+function fitA4(){
+  const s=$('sheet'); s.style.zoom=1;
+  const max=297*96/25.4, h=s.scrollHeight;
+  if(h>max) s.style.zoom=(max/h).toFixed(3);
+}
+</script>
+</body>
+</html>
