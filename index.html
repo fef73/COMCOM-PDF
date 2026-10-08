@@ -236,8 +236,10 @@ $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 // ---------- Données climat (ERA5 via Open-Meteo) ----------
 // Une requête par commune ; 4 communes par clic, puis la main revient à l'utilisateur.
 // Les agrégats annuels (légers) sont gardés dans le navigateur : rien n'est rechargé deux fois.
-const VARS='temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum';  // neige recalculée localement
-const LOT=4, CACHE='comcom-v2-'+LAST;
+// Températures : ERA5-Land (≈ 9 km, corrigées selon l'altitude).
+// Précipitations : ERA5 (≈ 25 km), car Open-Meteo ne fournit pas les précipitations ERA5-Land.
+const VARS_T='temperature_2m_mean,temperature_2m_min,temperature_2m_max', VARS_P='precipitation_sum';
+const LOT=4, CACHE='comcom-v3-'+LAST;
 function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
 function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){}}
 
@@ -245,7 +247,7 @@ function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringi
 function yearly(d){
   const Y={};
   d.time.forEach((t,i)=>{
-    const y=+t.slice(0,4), o=Y[y]=Y[y]||{t:[],p:0,s:0,gel:0,chaud:0};
+    const y=+t.slice(0,4), o=Y[y]=Y[y]||{t:[],p:0,s:0,np:0,gel:0,chaud:0};
     const tm=d.temperature_2m_mean[i], tn=d.temperature_2m_min[i], tx=d.temperature_2m_max[i];
     if(ok(tm)) o.t.push(tm);
     if(ok(d.precipitation_sum[i])) o.p+=d.precipitation_sum[i];
@@ -253,11 +255,12 @@ function yearly(d){
     // tout en neige à 0 °C ou moins, tout en pluie à 2 °C ou plus, linéaire entre les deux.
     // 1 mm d'eau ≈ 1 cm de neige fraîche (rapport 1:10).
     const pr=d.precipitation_sum[i];
+    if(ok(pr)) o.np++;
     if(ok(pr)&&ok(tm)) o.s+=pr*Math.min(1,Math.max(0,(2-tm)/2));
     if(ok(tn)&&tn<0) o.gel++;
     if(ok(tx)&&tx>=30) o.chaud++;
   });
-  Object.values(Y).forEach(o=>o.t=mean(o.t));
+  Object.values(Y).forEach(o=>{o.t=mean(o.t); if(o.np<300){o.p=NaN;o.s=NaN;} delete o.np;});
   return Y;
 }
 function avg(Y,a,b,k){const v=[];for(let y=a;y<=b;y++) if(Y[y]) v.push(Y[y][k]);return mean(v);}
@@ -293,7 +296,13 @@ $('bGo').onclick=async()=>{
     for(let i=0;i<lot.length;i++){
       const c=lot[i], n=JOB.com.length-todo.length+i+1;
       st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
-      const j=await getJSON(`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&models=era5_land${ok(c.altFix)?'&elevation='+c.altFix:''}&timezone=Europe%2FParis`);
+      const base=`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31${ok(c.altFix)?'&elevation='+c.altFix:''}&timezone=Europe%2FParis`;
+      const j=await getJSON(`${base}&daily=${VARS_T}&models=era5_land`);
+      const jp=await getJSON(`${base}&daily=${VARS_P}&models=era5`);
+      // Alignement des précipitations sur les dates des températures
+      const P={}; jp.daily.time.forEach((t,k)=>P[t]=jp.daily.precipitation_sum[k]);
+      j.daily.precipitation_sum=j.daily.time.map(t=>P[t]);
+      if(!j.daily.precipitation_sum.some(ok)) throw new Error('précipitations absentes de la réponse Open-Meteo pour '+c.nom);
       c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
     }
     const reste=JOB.com.filter(c=>!c.Y).length;
@@ -385,7 +394,7 @@ function render(nom,com){
       <div><h2>Température selon l'altitude</h2>${scatter(com)}
         <div class="cap">Chaque point est une commune (normale 1991–2020). Environ −0,5 à −0,6 °C par 100 m en montagne.</div></div>
     </div>
-    <div class="foot">Données : réanalyse ERA5-Land (Copernicus / ECMWF, maille ≈ 9 km) via Open-Meteo, au centre de chaque commune ; températures corrigées selon l'altitude. Communes : geo.api.gouv.fr.<br>
+    <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au centre de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km). Communes : geo.api.gouv.fr.<br>
       * Précipitations : moyenne du secteur (maille), sans correction d'altitude. Neige : cumul de neige fraîche estimé à partir des précipitations et de la température locale (neige sous 0 °C, pluie au-dessus de 2 °C, 1 mm d'eau ≈ 1 cm de neige) ; il ne s'agit pas de l'épaisseur au sol.<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
