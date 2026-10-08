@@ -36,7 +36,7 @@
     <small>Si le téléchargement direct échoue, téléchargez les fichiers <code>Q_73_previous-1950-2024_RR-T-Vent.csv.gz</code>,
     <code>Q_73_previous-1950-2024_autres-parametres.csv.gz</code> et leurs équivalents <code>latest-2025-2026</code> sur meteo.data.gouv.fr
     (jeu « Données climatologiques de base – quotidiennes »), puis :</small><div id="liens" style="width:100%;font-size:13px"></div>
-    <input type="file" id="files" multiple accept=".gz,.csv">
+    <input type="file" id="files" multiple accept=".gz,.csv"> <small>(sélectionnez les 4 fichiers d'un coup avec Ctrl+clic, ou ajoutez-les un par un)</small>
   </div>
   <div class="row"><button id="bExp" disabled>⬇ Enregistrer postes-mf.json</button> <span id="sum"></span></div>
   <div id="log"></div>
@@ -130,9 +130,18 @@ $('bNet').onclick=async()=>{
   }catch(e){log('✖ Téléchargement direct impossible ('+e.message+'). Utilisez le choix de fichiers ci-dessus.');}
   $('bNet').disabled=false;
 };
+// Les fichiers peuvent être ajoutés en une ou plusieurs fois ; un même fichier n'est jamais lu deux fois
+const LUS=new Set();
+const cle=n=>n.replace(/\s*\(\d+\)/,'').toLowerCase();   // « …(1).csv.gz » = même fichier
 $('files').onchange=async e=>{
-  for(const f of e.target.files){ log(`Lecture ${f.name}…`); await lireFlux(f.stream(),/\.gz$/i.test(f.name),f.name); }
-  fin();
+  for(const f of e.target.files){
+    if(LUS.has(cle(f.name))){ log(`↷ ${f.name} déjà lu, ignoré`); continue; }
+    LUS.add(cle(f.name)); log(`Lecture ${f.name}…`);
+    await lireFlux(f.stream(),/\.gz$/i.test(f.name),f.name);
+  }
+  const att=$('deps').value.split(',').map(x=>x.trim()).filter(Boolean).flatMap(files).filter(f=>!LUS.has(cle(f)));
+  if(att.length) log(`⚠ Fichiers encore manquants : ${att.join(', ')}`);
+  fin(); e.target.value='';
 };
 $('bExp').onclick=()=>{
   const a=document.createElement('a');
