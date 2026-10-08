@@ -387,12 +387,31 @@ function recaler(com){
     const k=Math.min(2.5,Math.max(0.4,Pc/c.pN));
     c.k=k; c.meth=meth; c.pN*=k; c.pR*=k; c.sN*=k; c.sR*=k;
   });
-  if(!com.some(c=>c.k)) return null;
+  // Neige : interpolée directement sur la neige fraîche MESURÉE par les postes à moins de 20 km
+  // (droite neige = a + b × altitude si ≥ 3 postes sur ≥ 400 m de dénivelé). L'évolution récente
+  // reprend le rapport médian « neige récente / normale » des postes qui ont les deux.
+  const RS=20, usedS=new Map(); let ratioS=NaN;
+  com.forEach(c=>{
+    const near=MF.filter(p=>ok(p.Sn)).map(p=>({p,d:km(c,p)})).filter(x=>x.d<=RS);
+    if(near.length<3) return;
+    const al=near.map(x=>x.p.alt); if(Math.max(...al)-Math.min(...al)<400) return;
+    const mx=mean(al), my=mean(near.map(x=>x.p.Sn));
+    let sxy=0,sxx=0; near.forEach(x=>{sxy+=(x.p.alt-mx)*(x.p.Sn-my);sxx+=(x.p.alt-mx)**2;});
+    const b=Math.max(0,sxy/sxx), a=my-b*mx;
+    const alt=Math.min(Math.max(c.alt,Math.min(...al)-300),Math.max(...al)+300);
+    const rat=near.filter(x=>ok(x.p.Sr)&&x.p.Sn>0).map(x=>x.p.Sr/x.p.Sn).sort((u,v)=>u-v);
+    const sn=Math.max(0,a+b*alt);
+    c.sN=sn;
+    if(rat.length>=3){const r=rat[Math.floor(rat.length/2)]; c.sR=sn*r; c.ratS=r;}
+    c.snowMes=true; near.forEach(x=>usedS.set(x.p.id,x.p));
+  });
+  const rs=com.filter(c=>ok(c.ratS)).map(c=>c.ratS); if(rs.length) ratioS=mean(rs);
+  if(!com.some(c=>c.k||c.snowMes)) return null;
   // Postes à présenter : les plus proches du centre du territoire ayant une mesure de neige si possible
   const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
   const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=20)
     .sort((a,b)=>(ok(b.Sn)-ok(a.Sn))||a.d-b.d).slice(0,5).sort((a,b)=>a.alt-b.alt);
-  return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste};
+  return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste, nS:usedS.size, neigeMes:com.every(c=>c.snowMes), ratioS};
 }
 
 // ---------- Génération par lots ----------
@@ -514,13 +533,17 @@ function render(nom,com,cal){
       ${cal.liste.map(p=>`<tr><td>${p.nom}</td><td>${f0(p.alt)}</td><td>${f0(p.d)}</td><td>${f0(p.Pn)}</td><td>${f0(p.Sn)}</td><td>${f0(p.Sr)}</td></tr>`).join('')}
     </table>`:''}
     <div class="note">
-      <p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>
-      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 15 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée.</p>`
+      ${cal&&cal.neigeMes
+      ?`<p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est calculé à partir de la neige fraîche <b>mesurée</b> par ${cal.nS} postes Météo-France situés à moins de 20 km, ajustée à l'altitude de chaque commune. C'est une valeur représentative du secteur à cette altitude, pas une mesure prise dans la commune.</p>`
+      :`<p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>`}
+      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 15 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. ${cal.neigeMes?'Le tableau des postes ci-dessus donne les mesures qui ont servi au calcul de la neige.':"La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée."}</p>`
       :`<p><b>Pourquoi la neige augmente-t-elle avec l'altitude ?</b> Les précipitations proviennent d'une maille d'environ 25 km : la même quantité d'eau est retenue pour toutes les communes du secteur, soit ${f0(pN)} mm par an en moyenne (1991–2020). Seule la température change avec l'altitude : plus haut, une plus grande part de cette eau tombe en neige. En réalité, il tombe aussi plus d'eau en altitude : les valeurs des communes hautes sont plutôt sous-estimées, celles des communes basses plutôt surestimées.</p>`}
-      <p><b>Pourquoi la neige ne baisse-t-elle pas partout malgré le réchauffement ?</b> Sur ${R0}–${LAST}, les précipitations du secteur ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale. ${dP>0?`En altitude, où il fait encore assez froid, ce surplus d'eau tombe en neige et compense le réchauffement de ${f1(tR-tN)} °C. `:''}Résultat : ${sgn(dS(basse))} % de neige à ${basse.nom} (${f0(basse.alt)} m), ${sgn(dS(haute))} % à ${haute.nom} (${f0(haute.alt)} m). Dix années restent une période courte : une ou deux saisons très neigeuses suffisent à faire varier fortement la moyenne.</p>
+      ${cal&&cal.neigeMes&&ok(cal.ratioS)
+      ?`<p><b>La neige diminue-t-elle ?</b> Sur ${R0}–${LAST}, les postes proches ont mesuré en moyenne ${f0(Math.abs((cal.ratioS-1)*100))} % de neige fraîche ${cal.ratioS<1?'de moins':'de plus'} que la normale 1991–2020, alors que la température a augmenté de ${f1(tR-tN)} °C et que les précipitations ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale${dP>0&&cal.ratioS<1?' : il tombe autant d\'eau, mais une part plus importante tombe en pluie':''}. Dix années restent une période courte : une ou deux saisons très neigeuses ou très sèches suffisent à faire varier la moyenne.</p>`
+      :`<p><b>Pourquoi la neige ne baisse-t-elle pas partout malgré le réchauffement ?</b> Sur ${R0}–${LAST}, les précipitations du secteur ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale. ${dP>0?`En altitude, où il fait encore assez froid, ce surplus d'eau tombe en neige et compense le réchauffement de ${f1(tR-tN)} °C. `:''}Résultat : ${sgn(dS(basse))} % de neige à ${basse.nom} (${f0(basse.alt)} m), ${sgn(dS(haute))} % à ${haute.nom} (${f0(haute.alt)} m). Dix années restent une période courte : une ou deux saisons très neigeuses suffisent à faire varier fortement la moyenne.</p>`}
     </div>
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au centre de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
-      * Neige estimée : voir l'encadré ci-dessus.<br>
+      * Pluie et neige : voir l'encadré ci-dessus.<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
   fitA4();
