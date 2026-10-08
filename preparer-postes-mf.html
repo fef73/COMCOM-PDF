@@ -59,7 +59,7 @@ const num=v=>{if(v===undefined) return NaN; v=v.trim(); return v===''?NaN:+v.rep
 async function lireFlux(stream,gz,nom){
   let s=gz?stream.pipeThrough(new DecompressionStream('gzip')):stream;
   const rd=s.pipeThrough(new TextDecoderStream('utf-8')).getReader();
-  let buf='', head=null, n=0, idx={};
+  let buf='', head=null, n=0, idx={}, nhnTot=0;
   const ligne=l=>{
     if(!l) return;
     const c=l.split(';');
@@ -69,7 +69,7 @@ async function lireFlux(stream,gz,nom){
     const p=POSTES[id]=POSTES[id]||{id,nom:c[idx.NOM_USUEL].trim(),lat:num(c[idx.LAT]),lon:num(c[idx.LON]),alt:num(c[idx.ALTI]),Y:{}};
     const y=+date.slice(0,4), m=+date.slice(4,6), a=p.Y[y]=p.Y[y]||{rr:0,nrr:0,hn:0,nhn:0};
     if(idx.RR>=0){const v=num(c[idx.RR]); if(!isNaN(v)){a.rr+=v;a.nrr++;}}
-    if(idx.HNEIGEF>=0){const v=num(c[idx.HNEIGEF]); if(!isNaN(v)){a.hn+=v; if(m>=11||m<=4) a.nhn++;}}
+    if(idx.HNEIGEF>=0){const v=num(c[idx.HNEIGEF]); if(!isNaN(v)){a.hn+=v; nhnTot++; if(m>=11||m<=4) a.nhn++;}}
     n++;
   };
   for(;;){
@@ -79,6 +79,7 @@ async function lireFlux(stream,gz,nom){
   }
   ligne(buf);
   log(`✔ ${nom} : ${n.toLocaleString('fr-FR')} lignes utiles`+(head&&idx.HNEIGEF<0&&idx.RR<0?' (aucune colonne RR ni HNEIGEF !)':''));
+  if(head){const nv=head.filter(h=>/NEIG/.test(h)); if(nv.length) log(`  colonnes neige : ${nv.join(', ')} · valeurs HNEIGEF lues : ${nhnTot.toLocaleString('fr-FR')}`);}
 }
 
 // Réduction en valeurs annuelles
@@ -88,7 +89,7 @@ function annualiser(){
     const Y=p.Y, P={},S={};
     Object.entries(Y).forEach(([y,a])=>{
       if(a.nrr>=335) P[y]=Math.round(a.rr*365.25/a.nrr);   // année quasi complète, ramenée à 365 jours
-      if(a.nhn>=150) S[y]=Math.round(a.hn);                   // hiver (nov.–avr.) suivi au moins 150 jours
+      if(a.nhn>=90) S[y]=Math.round(a.hn);                    // hiver (nov.–avr.) suivi au moins 90 jours
     });
     if(Object.keys(P).length||Object.keys(S).length)
       out.push({id:p.id,nom:p.nom,lat:p.lat,lon:p.lon,alt:p.alt,P,S});
