@@ -358,14 +358,16 @@ function render(nom,com){
   const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
   const terr=years.map(y=>mean(com.map(c=>c.Y[y]&&c.Y[y].t)));
   const tN=mean(terr.slice(0,N1-N0+1)), tR=mean(terr.slice(R0-N0));
-  const pop=com.reduce((s,c)=>s+c.pop,0);
+  // Une commune ajoutée plusieurs fois (altitudes différentes) n'est comptée qu'une fois
+  const uniq=[...new Map(com.map(c=>[c.insee,c])).values()];
+  const nbC=uniq.length, pop=uniq.reduce((s,c)=>s+c.pop,0);
   const alts=com.map(c=>c.alt), sN=mean(com.map(c=>c.sN)), sR=mean(com.map(c=>c.sR));
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
   const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td><td>${f0(c.pN)}</td><td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
   $('sheet').innerHTML=`
     <h1>${nom}</h1>
-    <div class="sub">Fiche climat intercommunale · ${com.length} communes · ${f0(pop)} habitants · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
+    <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
     <div class="kpis">
       <div class="kpi"><b>${f1(tN)} °C</b><span>Température moyenne du territoire, normale 1991–2020</span></div>
       <div class="kpi"><b style="color:var(--warm)">+${f1(tR-tN)} °C</b><span>Écart ${R0}–${LAST} par rapport à la normale</span></div>
