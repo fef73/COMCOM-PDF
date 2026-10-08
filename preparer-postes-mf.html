@@ -35,7 +35,7 @@
   <div class="row">
     <small>Si le téléchargement direct échoue, téléchargez les fichiers <code>Q_73_previous-1950-2024_RR-T-Vent.csv.gz</code>,
     <code>Q_73_previous-1950-2024_autres-parametres.csv.gz</code> et leurs équivalents <code>latest-2025-2026</code> sur meteo.data.gouv.fr
-    (jeu « Données climatologiques de base – quotidiennes »), puis :</small>
+    (jeu « Données climatologiques de base – quotidiennes »), puis :</small><div id="liens" style="width:100%;font-size:13px"></div>
     <input type="file" id="files" multiple accept=".gz,.csv">
   </div>
   <div class="row"><button id="bExp" disabled>⬇ Enregistrer postes-mf.json</button> <span id="sum"></span></div>
@@ -47,7 +47,7 @@
 const $=id=>document.getElementById(id);
 const log=t=>{$('log').textContent+=t+'\n';$('log').scrollTop=1e9;};
 const Y0=1991;
-const BASE='https://object.files.data.gouv.fr/meteofrance/data/synchro_ftp/BASE/QUOT/';
+const BASE='https://meteofrance.s3.sbg.io.cloud.ovh.net/data/synchro_ftp/BASE/QUOT/';
 const files=d=>[`Q_${d}_previous-1950-2024_RR-T-Vent.csv.gz`,`Q_${d}_previous-1950-2024_autres-parametres.csv.gz`,
                 `Q_${d}_latest-2025-2026_RR-T-Vent.csv.gz`,`Q_${d}_latest-2025-2026_autres-parametres.csv.gz`];
 
@@ -111,6 +111,9 @@ function fin(){
   log('Terminé.');
 }
 
+function liens(){$('liens').innerHTML=$('deps').value.split(',').map(x=>x.trim()).filter(Boolean)
+  .flatMap(files).map(f=>`<a href="${BASE+f}" download>${f}</a>`).join('<br>');}
+$('deps').oninput=liens; liens();
 $('bNet').onclick=async()=>{
   $('bNet').disabled=true;
   try{
