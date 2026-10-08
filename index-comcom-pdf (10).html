@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche climat intercommunale</title>
+<style>
+  :root{--ink:#1d2733;--mute:#5d6b7a;--line:#d8dee5;--acc:#1f5f99;--warm:#c8452c;--cold:#2b7bbf;--bg:#eef2f6;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);}
+  .lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:9}
+  .lock form{background:#fff;padding:24px;border-radius:10px;box-shadow:0 2px 12px #0002;display:flex;flex-direction:column;gap:10px;width:280px}
+  .lock input,.panel input,.panel select{padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px}
+  button{padding:8px 14px;border:0;border-radius:6px;background:var(--acc);color:#fff;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  .err{color:var(--warm);font-size:13px;min-height:1em}
+  .panel{max-width:210mm;margin:16px auto;background:#fff;padding:16px;border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .panel .grow{flex:1;min-width:200px}
+  #status{width:100%;font-size:13px;color:var(--mute)}
+  #liste{width:100%;display:none;border-top:1px solid var(--line);padding-top:10px}
+  #liste.on{display:block}
+  #liste .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:13px}
+  #liste .tools a{color:var(--acc);cursor:pointer;text-decoration:underline}
+  #coms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px 12px;font-size:13px}
+  #coms label{display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap;min-width:0}
+  #coms label .n{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #coms label small{flex-shrink:0;color:var(--mute)}
+  .addf{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;width:100%;background:var(--bg);padding:8px;border-radius:6px}
+  .addf input{padding:6px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+  .addf .lnk{color:var(--mute);cursor:pointer;text-decoration:underline}
+  #coms label.ext{color:var(--acc);font-style:italic}
+  #coms .x{color:var(--warm);cursor:pointer;margin-left:auto;padding:0 4px}
+  .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+  #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+  #sugg button{background:#fff;color:var(--acc);border:1px solid var(--acc);padding:4px 8px;font-size:12px}
+  #chrono{width:100%;display:none;align-items:center;gap:10px}
+  #chrono.on{display:flex}
+  #chrono b{font:600 22px/1 "Segoe UI",Roboto,monospace;color:var(--acc);min-width:64px;font-variant-numeric:tabular-nums}
+  #chrono .bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+  #chrono .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width 1s linear}
+  #chrono span{font-size:12px;color:var(--mute)}
+  /* Fiche A4 */
+  #sheet{width:210mm;min-height:297mm;margin:0 auto 24px;background:#fff;padding:12mm 13mm;display:none}
+  #sheet.on{display:block}
+  h1{font-size:20pt;margin:0;color:var(--acc)}
+  .sub{color:var(--mute);font-size:9.5pt;margin:2px 0 10px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+  .kpi{border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  .kpi b{display:block;font-size:15pt}
+  .kpi span{font-size:8pt;color:var(--mute)}
+  h2{font-size:11pt;margin:10px 0 4px;color:var(--acc);border-bottom:1px solid var(--line);padding-bottom:2px}
+  table{width:100%;border-collapse:collapse;font-size:8.3pt}
+  th,td{padding:3px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:7.6pt;color:var(--mute);font-weight:600;vertical-align:bottom;white-space:normal}
+  td.hot{color:var(--warm);font-weight:600}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  svg{width:100%;height:auto;display:block}
+  .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
+  .note{font-size:7.8pt;line-height:1.35;margin-top:8px;padding:6px 8px;background:#f4f7fa;border-left:3px solid var(--acc);border-radius:3px}
+  .note b{color:var(--acc)}
+  .note p{margin:2px 0}
+  .foot{font-size:7.4pt;color:var(--mute);margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
+  .cachebar{max-width:210mm;margin:-6px auto 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;font-size:13px;color:var(--mute)}
+  .cachebar button{background:#fff;color:var(--ink);border:1px solid var(--line);padding:6px 12px;font-size:13px}
+  .cachebar button:hover{border-color:var(--acc);color:var(--acc)}
+  @page{size:A4;margin:0}
+  @media print{
+    body{background:#fff}
+    .panel,.lock,.cachebar{display:none!important}
+    #sheet{margin:0;box-shadow:none;page-break-after:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <form id="lockForm">
+    <strong>Fiche climat intercommunale</strong>
+    <input type="password" id="pw" placeholder="Mot de passe" autofocus>
+    <button>Entrer</button>
+    <div class="err" id="pwErr"></div>
+  </form>
+</div>
+
+<div class="panel">
+  <input class="grow" id="q" placeholder="Nom de la communauté de communes" value="Cœur de Maurienne Arvan">
+  <button id="bSearch">Rechercher</button>
+  <select id="epci" class="grow" style="display:none"></select>
+  <div id="liste">
+    <div class="tools">
+      <input id="titre" class="grow" placeholder="Titre de la fiche">
+      <span id="nb"></span> · <a id="tous">tout cocher</a> · <a id="aucun">tout décocher</a>
+    </div>
+    <div id="coms"></div>
+    <div class="add">
+      <input id="qc" class="grow" placeholder="Ajouter une commune : nom ou code INSEE">
+      <button id="bAdd">Chercher</button>
+      <div id="sugg"></div>
+    </div>
+  </div>
+  <button id="bGo" disabled>Générer la fiche</button>
+  <button id="bPrint" disabled>Imprimer / PDF</button>
+  <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
+  <div id="status"></div>
+</div>
+
+<div class="cachebar">
+  <span id="cacheInfo">💾 Cache local : 0 commune enregistrée sur cet appareil</span>
+  <button id="bSave">⬇ Enregistrer</button>
+  <button id="bLoad">⬆ Restaurer</button>
+  <button id="bClear">Vider le cache</button>
+  <span id="mfInfo">📡 Postes Météo-France : aucun</span>
+  <button id="bMf">Charger postes-mf.json</button>
+  <input type="file" id="fMf" accept=".json,application/json" style="display:none">
+  <input type="file" id="fLoad" accept=".json,application/json" style="display:none">
+</div>
+
+<div id="sheet"></div>
+
+<script>
+// ---------- Accès (barrière légère, mot de passe haché) ----------
+const PW_HASH = '77656a756e7b9e3ea3f369b084aa261129db5876d4649438daaf92123750552e';
+async function sha256(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+document.getElementById('lockForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(await sha256(document.getElementById('pw').value)===PW_HASH) document.getElementById('lock').remove();
+  else document.getElementById('pwErr').textContent='Mot de passe incorrect';
+};
+
+// ---------- Outils ----------
+const $=id=>document.getElementById(id);
+const st=t=>$('status').textContent=t;
+const ok=v=>v!==null&&v!==undefined&&!isNaN(v);
+const mean=a=>{const b=a.filter(ok);return b.length?b.reduce((s,x)=>s+x,0)/b.length:NaN;};
+const f1=v=>ok(v)?v.toFixed(1).replace('.',','):'–';
+const f0=v=>ok(v)?Math.round(v).toLocaleString('fr-FR'):'–';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function getJSON(url){
+  const r=await fetch(url);
+  if(r.ok) return r.json();
+  let why=''; try{why=(await r.json()).reason||'';}catch(e){}
+  if(r.status===429){
+    if(/hour/i.test(why)) throw new Error('quota horaire Open-Meteo atteint : reprenez dans une heure (les communes déjà chargées sont gardées)');
+    if(/day/i.test(why)) throw new Error('quota journalier Open-Meteo atteint : reprenez demain (les communes déjà chargées sont gardées)');
+    throw new Error('quota minute Open-Meteo atteint : patientez une minute puis cliquez sur Continuer');
+  }
+  throw new Error('HTTP '+r.status+(why?' – '+why:''));
+}
+const LAST = new Date().getFullYear()-1;      // dernière année complète
+const N0=1991, N1=2020;                         // normales
+const R0=LAST-9;                                 // décennie récente
+
+// ---------- Recherche de l'intercommunalité ----------
+$('bSearch').onclick=async()=>{
+  st('Recherche…');
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis?nom=${encodeURIComponent($('q').value)}&fields=nom,code,population&limit=15`);
+    if(!l.length){st('Aucune intercommunalité trouvée.');return;}
+    $('epci').innerHTML=l.map(e=>`<option value="${e.code}">${e.nom}</option>`).join('');
+    $('epci').style.display=''; st(l.length+' résultat(s).');
+    await chargerListe();
+  }catch(e){st('Erreur : '+e.message);}
+};
+$('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
+$('bPrint').onclick=()=>window.print();
+
+// ---------- Liste des communes modifiable ----------
+let LIST=[];   // {nom,insee,pop,lat,lon,on,ext, alt?,Y?}
+const toCom=c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1],on:true});
+const cleC=c=>c.insee+(ok(c.altFix)?'@'+c.altFix:'');
+function withCache(c){const k=cacheGet(cleC(c)); if(k){c.alt=k.alt;c.Y=k.Y;} return c;}
+// Altitude au centre de la commune (modèle de terrain 90 m), jusqu'à 100 points par requête
+async function altitudes(pts){
+  for(let i=0;i<pts.length;i+=100){
+    const g=pts.slice(i,i+100);
+    try{
+      const j=await getJSON(`https://api.open-meteo.com/v1/elevation?latitude=${g.map(p=>p.lat).join(',')}&longitude=${g.map(p=>p.lon).join(',')}`);
+      g.forEach((p,k)=>p.altDem=j.elevation[k]);
+    }catch(e){}
+  }
+  return pts;
+}
+const altTxt=c=>{const a=ok(c.altFix)?c.altFix:ok(c.alt)?c.alt:c.altDem;return ok(a)?Math.round(a)+' m':'';};
+async function chargerListe(){
+  const code=$('epci').value; if(!code) return;
+  st('Liste des communes…');
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`);
+    LIST=l.filter(c=>c.centre).map(toCom).map(withCache).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+    $('titre').value=$('epci').selectedOptions[0].text;
+    $('liste').classList.add('on'); afficherListe();
+    await altitudes(LIST.filter(c=>!ok(c.alt))); afficherListe();
+    st(LIST.length+' communes. Décochez celles à exclure, ajoutez-en si besoin, puis générez la fiche.');
+  }catch(e){st('Erreur : '+e.message);}
+}
+function afficherListe(){
+  $('coms').innerHTML=LIST.map((c,i)=>`<label class="${c.ext?'ext':''}" title="${c.nom} (${c.insee})${c.Y?' – données déjà chargées':''}">
+    <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> <span class="n">${c.nom}</span> <small>${altTxt(c)}</small>${c.Y?' ✓':''}
+    ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
+  const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
+  $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
+  $('bGo').disabled=!n||!!TICK;
+  $('bGo').textContent='Générer la fiche';
+}
+$('coms').onclick=e=>{
+  if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();return;}
+  if(e.target.dataset.i!==undefined){LIST[+e.target.dataset.i].on=e.target.checked;afficherListe();}
+};
+$('tous').onclick=()=>{LIST.forEach(c=>c.on=true);afficherListe();};
+$('aucun').onclick=()=>{LIST.forEach(c=>c.on=false);afficherListe();};
+$('epci').onchange=chargerListe;
+
+// Ajout d'une commune hors intercommunalité
+$('bAdd').onclick=async()=>{
+  const q=$('qc').value.trim(); if(!q) return;
+  try{
+    const F='fields=nom,code,centre,population,codeDepartement';
+    let r=/^\d[\dAB]\d{3}$/i.test(q)
+      ? [await getJSON(`https://geo.api.gouv.fr/communes/${q.toUpperCase()}?${F}`)]
+      : await getJSON(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&${F}&boost=population&limit=8`);
+    r=r.filter(c=>c&&c.centre);
+    const pts=await altitudes(r.map(toCom));
+    $('sugg').innerHTML=r.length?r.map((c,i)=>`<button data-k="${i}">${c.nom} (${c.codeDepartement}) · ${c.code}${ok(pts[i].altDem)?' · '+Math.round(pts[i].altDem)+' m':''}</button>`).join(''):'<span style="font-size:12px">Aucune commune trouvée.</span>';
+    $('sugg').onclick=e=>{
+      const k=e.target.dataset.k; if(k===undefined) return;
+      const p=pts[+k], dem=ok(p.altDem)?Math.round(p.altDem):'';
+      $('sugg').innerHTML=`<div class="addf">
+        <b>${p.nom}</b> (${p.insee}) · Nom affiché <input id="aNom" value="${p.nom}" size="22">
+        Altitude <input id="aAlt" type="number" min="-10" max="4810" step="1" value="${dem}" style="width:80px"> m
+        <span style="color:var(--mute)">(par défaut : centre de la commune, ${dem} m)</span>
+        <button id="aOk">Ajouter</button> <span class="lnk" id="aNo">annuler</span></div>`;
+      $('aNo').onclick=()=>{$('sugg').innerHTML='';};
+      $('aOk').onclick=()=>{
+        const alt=Math.round(+$('aAlt').value), nom=$('aNom').value.trim()||p.nom;
+        if(!ok(alt)||$('aAlt').value===''){$('aAlt').focus();return;}
+        const altFix=(alt===dem)?undefined:alt;
+        const ex=LIST.find(x=>x.insee===p.insee&&x.altFix===altFix&&x.nom===nom);
+        if(ex) ex.on=true;
+        else{
+          const n=LIST.filter(x=>x.nom===nom).length;
+          LIST.push(withCache({...p,nom:n?`${nom} (${alt} m)`:nom,altFix,ext:true,on:true}));
+        }
+        $('sugg').innerHTML=''; $('qc').value=''; afficherListe();
+      };
+      $('aAlt').onkeydown=$('aNom').onkeydown=ev=>{if(ev.key==='Enter')$('aOk').click();};
+      $('aAlt').select();
+    };
+  }catch(e){$('sugg').innerHTML='<span style="font-size:12px">Commune introuvable.</span>';}
+};
+$('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
+
+// ---------- Données climat (ERA5 via Open-Meteo) ----------
+// Une requête par commune ; 4 communes par clic, puis la main revient à l'utilisateur.
+// Les agrégats annuels (légers) sont gardés dans le navigateur : rien n'est rechargé deux fois.
+// Températures : ERA5-Land (≈ 9 km, corrigées selon l'altitude).
+// Précipitations : ERA5 (≈ 25 km), car Open-Meteo ne fournit pas les précipitations ERA5-Land.
+const VARS_T='temperature_2m_mean,temperature_2m_min,temperature_2m_max', VARS_P='precipitation_sum';
+const LOT=4, CACHE='comcom-v3-'+LAST;
+function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
+function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){} cacheInfo();}
+
+// ---------- Gestion du cache local (3 boutons) ----------
+const cacheKeys=()=>Object.keys(localStorage).filter(k=>k.startsWith('comcom-'));
+function cacheInfo(){
+  let n=0; try{n=cacheKeys().filter(k=>k.startsWith(CACHE+'-')).length;}catch(e){}
+  $('cacheInfo').textContent=`💾 Cache local : ${n} commune${n>1?'s':''} enregistrée${n>1?'s':''} sur cet appareil`;
+}
+$('bSave').onclick=()=>{
+  const o={}; cacheKeys().forEach(k=>o[k]=localStorage.getItem(k));
+  if(!Object.keys(o).length){st('Le cache est vide : rien à enregistrer.');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));
+  a.download=`cache-comcom-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('bLoad').onclick=()=>$('fLoad').click();
+$('fLoad').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const o=JSON.parse(await f.text()); let n=0;
+    Object.entries(o).forEach(([k,v])=>{if(k.startsWith('comcom-')&&typeof v==='string'){localStorage.setItem(k,v);n++;}});
+    LIST.forEach(withCache); if(LIST.length) afficherListe(); cacheInfo();
+    st(`${n} entrée(s) restaurée(s).`);
+  }catch(err){st('Fichier de cache illisible.');}
+  e.target.value='';
+};
+$('bClear').onclick=()=>{
+  if(!confirm('Vider le cache ? Toutes les communes devront être rechargées depuis Open-Meteo.')) return;
+  cacheKeys().forEach(k=>localStorage.removeItem(k));
+  LIST.forEach(c=>{delete c.Y; delete c.alt;});
+  if(LIST.length) afficherListe(); cacheInfo();
+  st('Cache vidé : la prochaine génération rechargera toutes les communes.');
+};
+
+// Agrégats annuels d'une série journalière
+function yearly(d){
+  const Y={};
+  d.time.forEach((t,i)=>{
+    const y=+t.slice(0,4), o=Y[y]=Y[y]||{t:[],p:0,s:0,np:0,gel:0,chaud:0};
+    const tm=d.temperature_2m_mean[i], tn=d.temperature_2m_min[i], tx=d.temperature_2m_max[i];
+    if(ok(tm)) o.t.push(tm);
+    if(ok(d.precipitation_sum[i])) o.p+=d.precipitation_sum[i];
+    // Part neigeuse selon la température moyenne du jour à l'altitude de la commune :
+    // tout en neige à 0 °C ou moins, tout en pluie à 2 °C ou plus, linéaire entre les deux.
+    // 1 mm d'eau ≈ 1 cm de neige fraîche (rapport 1:10).
+    const pr=d.precipitation_sum[i];
+    if(ok(pr)) o.np++;
+    if(ok(pr)&&ok(tm)) o.s+=pr*Math.min(1,Math.max(0,(2-tm)/2));
+    if(ok(tn)&&tn<0) o.gel++;
+    if(ok(tx)&&tx>=30) o.chaud++;
+  });
+  Object.values(Y).forEach(o=>{o.t=mean(o.t); if(o.np<300){o.p=NaN;o.s=NaN;} delete o.np;});
+  return Y;
+}
+function avg(Y,a,b,k){const v=[];for(let y=a;y<=b;y++) if(Y[y]) v.push(Y[y][k]);return mean(v);}
+
+// ---------- Chronomètre ----------
+let TICK=null;
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+function chronoStop(){clearInterval(TICK);TICK=null;$('chrono').classList.remove('on');}
+// Compte à rebours : le bouton Continuer se réactive tout seul à zéro
+function attente(sec,label){
+  chronoStop(); $('bGo').disabled=true;
+  const fin=Date.now()+sec*1000; $('chrono').classList.add('on'); $('chL').textContent=label;
+  const maj=()=>{
+    const r=Math.max(0,Math.ceil((fin-Date.now())/1000));
+    $('chT').textContent=mmss(r); $('chBar').style.width=(100*(sec-r)/sec)+'%';
+    if(r===0){chronoStop(); $('bGo').disabled=false; st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
+  };
+  maj(); TICK=setInterval(maj,1000);
+}
+// Chronomètre montant pendant un chargement
+function enCours(label){
+  chronoStop(); const t0=Date.now(); $('chrono').classList.add('on'); $('chL').textContent=label; $('chBar').style.width='0';
+  const maj=()=>$('chT').textContent=mmss(Math.floor((Date.now()-t0)/1000));
+  maj(); TICK=setInterval(maj,1000);
+}
+
+try{cacheInfo();}catch(e){}
+
+// ---------- Postes Météo-France (recalage des précipitations et de la neige) ----------
+// Fichier postes-mf.json produit par preparer-postes-mf.html : cherché à côté de la page,
+// sinon chargé à la main (gardé ensuite dans le navigateur, hors « Vider le cache »).
+let MF=null;
+const MF_KEY='mf-postes';
+function normale(o,a,b,min){const v=[];for(let y=a;y<=b;y++) if(o&&ok(o[y])) v.push(o[y]);return v.length>=min?mean(v):NaN;}
+function setMF(j){
+  MF=j.postes.map(p=>({...p,Pn:normale(p.P,N0,N1,20),Sn:normale(p.S,N0,N1,20),Sr:normale(p.S,R0,LAST,7),Pr:normale(p.P,R0,LAST,7)}))
+             .filter(p=>ok(p.lat)&&ok(p.lon)&&(ok(p.Pn)||ok(p.Sn)));
+  $('mfInfo').textContent=`📡 Postes Météo-France : ${MF.length} (dép. ${j.departements}, ${j.genere})`;
+}
+(async()=>{
+  try{const r=await fetch('postes-mf.json'); if(r.ok){const j=await r.json(); setMF(j); return;}}catch(e){}
+  try{const t=localStorage.getItem(MF_KEY); if(t) setMF(JSON.parse(t));}catch(e){}
+})();
+$('bMf').onclick=()=>$('fMf').click();
+$('fMf').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{const t=await f.text(); setMF(JSON.parse(t)); try{localStorage.setItem(MF_KEY,t);}catch(err){} st('Postes Météo-France chargés : ils serviront au recalage de la prochaine fiche.');}
+  catch(err){st('Fichier postes-mf.json illisible.');}
+  e.target.value='';
+};
+function km(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;
+  const h=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+
+// Recalage : pluie annuelle mesurée par les postes à moins de 30 km, en fonction de l'altitude
+// (droite pluie = a + b × altitude si les postes couvrent au moins 400 m de dénivelé, sinon poste le plus proche).
+// Le rapport pluie mesurée / pluie ERA5 corrige ensuite pluie et neige de chaque commune.
+function recaler(com){
+  if(!MF||!MF.length) return null;
+  const R=30, used=new Map();
+  com.forEach(c=>{
+    const near=MF.filter(p=>ok(p.Pn)).map(p=>({p,d:km(c,p)})).filter(x=>x.d<=R).sort((a,b)=>a.d-b.d);
+    if(!near.length||!ok(c.pN)) return;
+    let Pc, meth;
+    const al=near.map(x=>x.p.alt), span=Math.max(...al)-Math.min(...al);
+    if(near.length>=3&&span>=400){
+      const n=near.length, mx=mean(al), my=mean(near.map(x=>x.p.Pn));
+      let sxy=0,sxx=0; near.forEach(x=>{sxy+=(x.p.alt-mx)*(x.p.Pn-my);sxx+=(x.p.alt-mx)**2;});
+      const b=Math.max(0,sxy/sxx), a=my-b*mx;
+      const alt=Math.min(Math.max(c.alt,Math.min(...al)-300),Math.max(...al)+300);
+      Pc=a+b*alt; meth='grad'; near.forEach(x=>used.set(x.p.id,x.p));
+    }else{ Pc=near[0].p.Pn; meth='proche'; used.set(near[0].p.id,near[0].p); }
+    const k=Math.min(2.5,Math.max(0.4,Pc/c.pN));
+    c.k=k; c.meth=meth; c.pN*=k; c.pR*=k; c.sN*=k; c.sR*=k;
+  });
+  if(!com.some(c=>c.k)) return null;
+  // Postes à présenter : les plus proches du centre du territoire ayant une mesure de neige si possible
+  const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
+  const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=R)
+    .sort((a,b)=>(ok(b.Sn)-ok(a.Sn))||a.d-b.d).slice(0,5).sort((a,b)=>a.alt-b.alt);
+  return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste};
+}
+
+// ---------- Génération par lots ----------
+$('bGo').onclick=async()=>{
+  $('bGo').disabled=true; $('bPrint').disabled=true;
+  const JOB={nom:$('titre').value.trim()||'Fiche climat', com:LIST.filter(c=>c.on)};
+  try{
+    const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
+    for(let i=0;i<lot.length;i++){
+      const c=lot[i], n=JOB.com.length-todo.length+i+1;
+      st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
+      const base=`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31${ok(c.altFix)?'&elevation='+c.altFix:''}&timezone=Europe%2FParis`;
+      const j=await getJSON(`${base}&daily=${VARS_T}&models=era5_land`);
+      const jp=await getJSON(`${base}&daily=${VARS_P}&models=era5`);
+      // Alignement des précipitations sur les dates des températures
+      const P={}; jp.daily.time.forEach((t,k)=>P[t]=jp.daily.precipitation_sum[k]);
+      j.daily.precipitation_sum=j.daily.time.map(t=>P[t]);
+      if(!j.daily.precipitation_sum.some(ok)) throw new Error('précipitations absentes de la réponse Open-Meteo pour '+c.nom);
+      c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
+    }
+    const reste=JOB.com.filter(c=>!c.Y).length;
+    if(reste){
+      const fait=JOB.com.length-reste;
+      $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
+      st(`${fait}/${JOB.com.length} communes chargées. Pause imposée par Open-Meteo avant le lot suivant.`);
+      attente(65,'avant le lot suivant');
+    }else{
+      const com=JOB.com.map(c=>{
+        const Y=c.Y;
+        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),pR:avg(Y,R0,LAST,'p'),sN:avg(Y,N0,N1,'s'),sR:avg(Y,R0,LAST,'s'),
+          gN:avg(Y,N0,N1,'gel'),gR:avg(Y,R0,LAST,'gel'),hR:avg(Y,R0,LAST,'chaud')};
+      });
+      com.forEach(c=>c.dT=c.tR-c.tN);
+      com.sort((a,b)=>a.alt-b.alt);
+      const cal=recaler(com);
+      chronoStop(); render(JOB.nom,com,cal);
+      $('bGo').textContent='Générer la fiche';
+      $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
+    }
+  }catch(e){
+    const fait=JOB.com.filter(c=>c.Y).length;
+    $('bGo').textContent='Continuer';
+    st(`Pause : ${e.message}.`+` (${fait}/${JOB.com.length} communes chargées)`);
+    chronoStop();
+    if(/minute/.test(e.message)) attente(65,'quota minute');
+    else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
+  }
+  if(!TICK||$('chL').textContent==='Chargement en cours'){chronoStop(); $('bGo').disabled=false;}
+};
+
+// ---------- Graphiques SVG ----------
+function lineChart(years,vals,normal,unit){
+  const W=340,H=170,L=30,R=8,T=10,B=22;
+  const v=vals.filter(ok), lo=Math.floor(Math.min(...v,normal)-.3), hi=Math.ceil(Math.max(...v,normal)+.3);
+  const x=i=>L+i*(W-L-R)/(years.length-1), y=t=>T+(hi-t)*(H-T-B)/(hi-lo);
+  let s=`<svg viewBox="0 0 ${W} ${H}" font-size="8" fill="#5d6b7a">`;
+  for(let t=lo;t<=hi;t++) s+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="#eef1f4"/><text x="${L-4}" y="${y(t)+3}" text-anchor="end">${t}${unit}</text>`;
+  years.forEach((yr,i)=>{if(yr%5===0) s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${yr}</text>`;});
+  s+=`<line x1="${L}" x2="${W-R}" y1="${y(normal)}" y2="${y(normal)}" stroke="#1f5f99" stroke-dasharray="4 3"/>`;
+  years.forEach((yr,i)=>{if(ok(vals[i])) s+=`<rect x="${x(i)-3}" width="6" y="${Math.min(y(vals[i]),y(normal))}" height="${Math.abs(y(vals[i])-y(normal))}" fill="${vals[i]>=normal?'#c8452c':'#2b7bbf'}" opacity=".85"/>`;});
+  // moyenne glissante 5 ans
+  const mm=vals.map((_,i)=>i<4?NaN:mean(vals.slice(i-4,i+1)));
+  s+=`<polyline fill="none" stroke="#1d2733" stroke-width="1.4" points="${mm.map((m,i)=>ok(m)?`${x(i)},${y(m)}`:'').join(' ')}"/>`;
+  return s+'</svg>';
+}
+function scatter(com){
+  const W=340,H=170,L=30,R=8,T=10,B=22;
+  const a=com.map(c=>c.alt), t=com.map(c=>c.tN);
+  const a0=Math.floor(Math.min(...a)/250)*250, a1=Math.ceil(Math.max(...a)/250)*250;
+  const t0=Math.floor(Math.min(...t)), t1=Math.ceil(Math.max(...t));
+  const x=v=>L+(v-a0)*(W-L-R)/(a1-a0||1), y=v=>T+(t1-v)*(H-T-B)/(t1-t0||1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" font-size="8" fill="#5d6b7a">`;
+  for(let v=t0;v<=t1;v++) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#eef1f4"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v}°</text>`;
+  for(let v=a0;v<=a1;v+=250) s+=`<text x="${x(v)}" y="${H-8}" text-anchor="middle">${v} m</text>`;
+  com.forEach(c=>s+=`<circle cx="${x(c.alt)}" cy="${y(c.tN)}" r="3.2" fill="#1f5f99" opacity=".8"><title>${c.nom}</title></circle>`);
+  return s+'</svg>';
+}
+
+// ---------- Rendu de la fiche ----------
+function render(nom,com,cal){
+  const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
+  const terr=years.map(y=>mean(com.map(c=>c.Y[y]&&c.Y[y].t)));
+  const tN=mean(terr.slice(0,N1-N0+1)), tR=mean(terr.slice(R0-N0));
+  // Une commune ajoutée plusieurs fois (altitudes différentes) n'est comptée qu'une fois
+  const uniq=[...new Map(com.map(c=>[c.insee,c])).values()];
+  const nbC=uniq.length, pop=uniq.reduce((s,c)=>s+c.pop,0);
+  const alts=com.map(c=>c.alt), sN=mean(com.map(c=>c.sN)), sR=mean(com.map(c=>c.sR));
+  // Précipitations du secteur (identiques pour les communes d'une même maille : on en donne la moyenne)
+  const pN=mean(com.map(c=>c.pN)), pR=mean(com.map(c=>c.pR)), dP=(pR/pN-1)*100;
+  const basse=com[0], haute=com[com.length-1];
+  const dS=c=>(c.sR/c.sN-1)*100;
+  const sgn=v=>(v>=0?'+':'−')+f0(Math.abs(v));
+  const hottest=years[terr.indexOf(Math.max(...terr))];
+  const now=new Date();
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
+  $('sheet').innerHTML=`
+    <h1>${nom}</h1>
+    <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
+    <div class="kpis">
+      <div class="kpi"><b>${f1(tN)} °C</b><span>Température moyenne du territoire, normale 1991–2020</span></div>
+      <div class="kpi"><b style="color:var(--warm)">+${f1(tR-tN)} °C</b><span>Écart ${R0}–${LAST} par rapport à la normale</span></div>
+      <div class="kpi"><b>${f0((sR/sN-1)*100)} %</b><span>Évolution des chutes de neige ${R0}–${LAST} vs normale</span></div>
+      <div class="kpi"><b>${hottest}</b><span>Année la plus chaude depuis ${N0}</span></div>
+    </div>
+    <h2>Les communes, de la plus basse à la plus haute</h2>
+    <table>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th></tr>
+      ${rows}
+    </table>
+    <div class="charts">
+      <div><h2>Température annuelle du territoire</h2>${lineChart(years,terr,tN,'°')}
+        <div class="cap">Barres : écart de chaque année à la normale 1991–2020 (pointillés). Trait noir : moyenne sur 5 ans.</div></div>
+      <div><h2>Température selon l'altitude</h2>${scatter(com)}
+        <div class="cap">Chaque point est une commune (normale 1991–2020). Environ −0,5 à −0,6 °C par 100 m en montagne.</div></div>
+    </div>
+    ${cal?`<h2>Mesures des postes Météo-France proches</h2>
+    <table>
+      <tr><th>Poste</th><th>Alt. (m)</th><th>Distance (km)</th><th>Pluie+neige /an normale (mm)</th><th>Neige fraîche /an normale (cm)</th><th>Neige fraîche /an ${R0}–${LAST} (cm)</th></tr>
+      ${cal.liste.map(p=>`<tr><td>${p.nom}</td><td>${f0(p.alt)}</td><td>${f0(p.d)}</td><td>${f0(p.Pn)}</td><td>${f0(p.Sn)}</td><td>${f0(p.Sr)}</td></tr>`).join('')}
+    </table>`:''}
+    <div class="note">
+      <p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>
+      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 30 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée.</p>`
+      :`<p><b>Pourquoi la neige augmente-t-elle avec l'altitude ?</b> Les précipitations proviennent d'une maille d'environ 25 km : la même quantité d'eau est retenue pour toutes les communes du secteur, soit ${f0(pN)} mm par an en moyenne (1991–2020). Seule la température change avec l'altitude : plus haut, une plus grande part de cette eau tombe en neige. En réalité, il tombe aussi plus d'eau en altitude : les valeurs des communes hautes sont plutôt sous-estimées, celles des communes basses plutôt surestimées.</p>`}
+      <p><b>Pourquoi la neige ne baisse-t-elle pas partout malgré le réchauffement ?</b> Sur ${R0}–${LAST}, les précipitations du secteur ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale. ${dP>0?`En altitude, où il fait encore assez froid, ce surplus d'eau tombe en neige et compense le réchauffement de ${f1(tR-tN)} °C. `:''}Résultat : ${sgn(dS(basse))} % de neige à ${basse.nom} (${f0(basse.alt)} m), ${sgn(dS(haute))} % à ${haute.nom} (${f0(haute.alt)} m). Dix années restent une période courte : une ou deux saisons très neigeuses suffisent à faire varier fortement la moyenne.</p>
+    </div>
+    <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au centre de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
+      * Neige estimée : voir l'encadré ci-dessus.<br>
+      La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
+  $('sheet').classList.add('on');
+  fitA4();
+}
+
+// Réduit légèrement la fiche si elle dépasse une page A4
+function fitA4(){
+  const s=$('sheet'); s.style.zoom=1;
+  const max=297*96/25.4, h=s.scrollHeight;
+  if(h>max) s.style.zoom=(max/h).toFixed(3);
+}
+</script>
+</body>
+</html>
