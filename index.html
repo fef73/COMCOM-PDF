@@ -17,6 +17,17 @@
   .panel{max-width:210mm;margin:16px auto;background:#fff;padding:16px;border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .panel .grow{flex:1;min-width:200px}
   #status{width:100%;font-size:13px;color:var(--mute)}
+  #liste{width:100%;display:none;border-top:1px solid var(--line);padding-top:10px}
+  #liste.on{display:block}
+  #liste .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:13px}
+  #liste .tools a{color:var(--acc);cursor:pointer;text-decoration:underline}
+  #coms{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 12px;font-size:13px}
+  #coms label{display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #coms label.ext{color:var(--acc);font-style:italic}
+  #coms .x{color:var(--warm);cursor:pointer;margin-left:auto;padding:0 4px}
+  .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+  #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+  #sugg button{background:#fff;color:var(--acc);border:1px solid var(--acc);padding:4px 8px;font-size:12px}
   #chrono{width:100%;display:none;align-items:center;gap:10px}
   #chrono.on{display:flex}
   #chrono b{font:600 22px/1 "Segoe UI",Roboto,monospace;color:var(--acc);min-width:64px;font-variant-numeric:tabular-nums}
@@ -65,6 +76,18 @@
   <input class="grow" id="q" placeholder="Nom de la communauté de communes" value="Cœur de Maurienne Arvan">
   <button id="bSearch">Rechercher</button>
   <select id="epci" class="grow" style="display:none"></select>
+  <div id="liste">
+    <div class="tools">
+      <input id="titre" class="grow" placeholder="Titre de la fiche">
+      <span id="nb"></span> · <a id="tous">tout cocher</a> · <a id="aucun">tout décocher</a>
+    </div>
+    <div id="coms"></div>
+    <div class="add">
+      <input id="qc" class="grow" placeholder="Ajouter une commune : nom ou code INSEE">
+      <button id="bAdd">Chercher</button>
+      <div id="sugg"></div>
+    </div>
+  </div>
   <button id="bGo" disabled>Générer la fiche</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
   <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
@@ -113,11 +136,65 @@ $('bSearch').onclick=async()=>{
     const l=await getJSON(`https://geo.api.gouv.fr/epcis?nom=${encodeURIComponent($('q').value)}&fields=nom,code,population&limit=15`);
     if(!l.length){st('Aucune intercommunalité trouvée.');return;}
     $('epci').innerHTML=l.map(e=>`<option value="${e.code}">${e.nom}</option>`).join('');
-    $('epci').style.display=''; $('bGo').disabled=false; st(l.length+' résultat(s).');
+    $('epci').style.display=''; st(l.length+' résultat(s).');
+    await chargerListe();
   }catch(e){st('Erreur : '+e.message);}
 };
 $('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
 $('bPrint').onclick=()=>window.print();
+
+// ---------- Liste des communes modifiable ----------
+let LIST=[];   // {nom,insee,pop,lat,lon,on,ext, alt?,Y?}
+const toCom=c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1],on:true});
+function withCache(c){const k=cacheGet(c.insee); if(k){c.alt=k.alt;c.Y=k.Y;} return c;}
+async function chargerListe(){
+  const code=$('epci').value; if(!code) return;
+  st('Liste des communes…');
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`);
+    LIST=l.filter(c=>c.centre).map(toCom).map(withCache).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+    $('titre').value=$('epci').selectedOptions[0].text;
+    $('liste').classList.add('on'); afficherListe();
+    st(LIST.length+' communes. Décochez celles à exclure, ajoutez-en si besoin, puis générez la fiche.');
+  }catch(e){st('Erreur : '+e.message);}
+}
+function afficherListe(){
+  $('coms').innerHTML=LIST.map((c,i)=>`<label class="${c.ext?'ext':''}" title="${c.nom} (${c.insee})${c.Y?' – données déjà chargées':''}">
+    <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> ${c.nom}${c.Y?' ✓':''}
+    ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
+  const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
+  $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
+  $('bGo').disabled=!n||!!TICK;
+  $('bGo').textContent='Générer la fiche';
+}
+$('coms').onclick=e=>{
+  if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();return;}
+  if(e.target.dataset.i!==undefined){LIST[+e.target.dataset.i].on=e.target.checked;afficherListe();}
+};
+$('tous').onclick=()=>{LIST.forEach(c=>c.on=true);afficherListe();};
+$('aucun').onclick=()=>{LIST.forEach(c=>c.on=false);afficherListe();};
+$('epci').onchange=chargerListe;
+
+// Ajout d'une commune hors intercommunalité
+$('bAdd').onclick=async()=>{
+  const q=$('qc').value.trim(); if(!q) return;
+  try{
+    const F='fields=nom,code,centre,population,codeDepartement';
+    let r=/^\d[\dAB]\d{3}$/i.test(q)
+      ? [await getJSON(`https://geo.api.gouv.fr/communes/${q.toUpperCase()}?${F}`)]
+      : await getJSON(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&${F}&boost=population&limit=8`);
+    r=r.filter(c=>c&&c.centre);
+    $('sugg').innerHTML=r.length?r.map((c,i)=>`<button data-k="${i}">${c.nom} (${c.codeDepartement})</button>`).join(''):'<span style="font-size:12px">Aucune commune trouvée.</span>';
+    $('sugg').onclick=e=>{
+      const k=e.target.dataset.k; if(k===undefined) return;
+      const c=r[+k];
+      const ex=LIST.find(x=>x.insee===c.code);
+      if(ex) ex.on=true; else LIST.push(withCache({...toCom(c),ext:true}));
+      $('sugg').innerHTML=''; $('qc').value=''; afficherListe();
+    };
+  }catch(e){$('sugg').innerHTML='<span style="font-size:12px">Commune introuvable.</span>';}
+};
+$('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 
 // ---------- Données climat (ERA5 via Open-Meteo) ----------
 // Une requête par commune ; 4 communes par clic, puis la main revient à l'utilisateur.
@@ -167,26 +244,16 @@ function enCours(label){
 }
 
 // ---------- Génération par lots ----------
-let JOB=null;   // {code, nom, com:[...]}
-$('epci').onchange=()=>{JOB=null;$('bGo').textContent='Générer la fiche';};
-
 $('bGo').onclick=async()=>{
   $('bGo').disabled=true; $('bPrint').disabled=true;
+  const JOB={nom:$('titre').value.trim()||'Fiche climat', com:LIST.filter(c=>c.on)};
   try{
-    const code=$('epci').value, nom=$('epci').selectedOptions[0].text;
-    if(!JOB||JOB.code!==code){
-      st('Liste des communes…');
-      const com=(await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`))
-        .filter(c=>c.centre).map(c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1]}));
-      com.forEach(c=>{const k=cacheGet(c.insee); if(k){c.alt=k.alt;c.Y=k.Y;}});
-      JOB={code,nom,com};
-    }
     const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
     for(let i=0;i<lot.length;i++){
       const c=lot[i], n=JOB.com.length-todo.length+i+1;
       st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
       const j=await getJSON(`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&timezone=Europe%2FParis`);
-      c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(c.insee,{alt:c.alt,Y:c.Y});
+      c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(c.insee,{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
     }
     const reste=JOB.com.filter(c=>!c.Y).length;
     if(reste){
@@ -207,9 +274,9 @@ $('bGo').onclick=async()=>{
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
   }catch(e){
-    const fait=JOB?JOB.com.filter(c=>c.Y).length:0;
-    if(JOB) $('bGo').textContent='Continuer';
-    st(`Pause : ${e.message}.`+(JOB?` (${fait}/${JOB.com.length} communes chargées)`:''));
+    const fait=JOB.com.filter(c=>c.Y).length;
+    $('bGo').textContent='Continuer';
+    st(`Pause : ${e.message}.`+` (${fait}/${JOB.com.length} communes chargées)`);
     chronoStop();
     if(/minute/.test(e.message)) attente(65,'quota minute');
     else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
