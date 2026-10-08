@@ -351,7 +351,9 @@ function setMF(j){
   $('mfInfo').textContent=`📡 Postes Météo-France : ${MF.length} (dép. ${j.departements}, ${j.genere})`;
 }
 (async()=>{
-  try{const r=await fetch('postes-mf.json'); if(r.ok){const j=await r.json(); setMF(j); return;}}catch(e){}
+  try{const r=await fetch('postes-mf.json',{cache:'no-cache'});
+    if(r.ok){try{setMF(await r.json()); return;}catch(e){$('mfInfo').textContent='📡 postes-mf.json vide ou invalide : générez-le avec preparer-postes-mf.html';}}
+  }catch(e){}
   try{const t=localStorage.getItem(MF_KEY); if(t) setMF(JSON.parse(t));}catch(e){}
 })();
 $('bMf').onclick=()=>$('fMf').click();
@@ -364,12 +366,12 @@ $('fMf').onchange=async e=>{
 function km(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r;
   const h=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
 
-// Recalage : pluie annuelle mesurée par les postes à moins de 30 km, en fonction de l'altitude
+// Recalage : pluie annuelle mesurée par les postes à moins de 15 km, en fonction de l'altitude
 // (droite pluie = a + b × altitude si les postes couvrent au moins 400 m de dénivelé, sinon poste le plus proche).
 // Le rapport pluie mesurée / pluie ERA5 corrige ensuite pluie et neige de chaque commune.
 function recaler(com){
   if(!MF||!MF.length) return null;
-  const R=30, used=new Map();
+  const R=15, used=new Map();   // 15 km : postes du même versant / de la même vallée
   com.forEach(c=>{
     const near=MF.filter(p=>ok(p.Pn)).map(p=>({p,d:km(c,p)})).filter(x=>x.d<=R).sort((a,b)=>a.d-b.d);
     if(!near.length||!ok(c.pN)) return;
@@ -388,7 +390,7 @@ function recaler(com){
   if(!com.some(c=>c.k)) return null;
   // Postes à présenter : les plus proches du centre du territoire ayant une mesure de neige si possible
   const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
-  const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=R)
+  const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=20)
     .sort((a,b)=>(ok(b.Sn)-ok(a.Sn))||a.d-b.d).slice(0,5).sort((a,b)=>a.alt-b.alt);
   return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste};
 }
@@ -513,7 +515,7 @@ function render(nom,com,cal){
     </table>`:''}
     <div class="note">
       <p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>
-      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 30 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée.</p>`
+      ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 15 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée.</p>`
       :`<p><b>Pourquoi la neige augmente-t-elle avec l'altitude ?</b> Les précipitations proviennent d'une maille d'environ 25 km : la même quantité d'eau est retenue pour toutes les communes du secteur, soit ${f0(pN)} mm par an en moyenne (1991–2020). Seule la température change avec l'altitude : plus haut, une plus grande part de cette eau tombe en neige. En réalité, il tombe aussi plus d'eau en altitude : les valeurs des communes hautes sont plutôt sous-estimées, celles des communes basses plutôt surestimées.</p>`}
       <p><b>Pourquoi la neige ne baisse-t-elle pas partout malgré le réchauffement ?</b> Sur ${R0}–${LAST}, les précipitations du secteur ont été ${dP>=0?'supérieures':'inférieures'} de ${f0(Math.abs(dP))} % à la normale. ${dP>0?`En altitude, où il fait encore assez froid, ce surplus d'eau tombe en neige et compense le réchauffement de ${f1(tR-tN)} °C. `:''}Résultat : ${sgn(dS(basse))} % de neige à ${basse.nom} (${f0(basse.alt)} m), ${sgn(dS(haute))} % à ${haute.nom} (${f0(haute.alt)} m). Dix années restent une période courte : une ou deux saisons très neigeuses suffisent à faire varier fortement la moyenne.</p>
     </div>
