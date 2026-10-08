@@ -45,9 +45,21 @@ Site : https://fef73.github.io/COMCOM-PDF/ — accès protégé par mot de passe
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Générateur de fiches |
+| `index.html` | Générateur de fiches climat |
+| `comcom-pollution.html` | Générateur de fiches qualité de l'air |
 | `preparer-postes-mf.html` | Préparation des postes Météo-France |
 | `postes-mf.json` | Pluie et neige fraîche mesurées par poste |
+
+## Fiche qualité de l'air (`comcom-pollution.html`)
+
+Même fonctionnement (choix de l'intercommunalité, liste modifiable, lots de 4, cache, mot de passe), avec une fiche A4 consacrée à l'air :
+
+- Indicateurs : part des jours bons ou moyens, jours dégradés par an, PM2,5 moyennes comparées au seuil OMS, polluant le plus souvent en cause.
+- Tableau par commune : moyennes de PM2,5, PM10 et NO₂ (en rouge au-dessus des valeurs guides OMS 2021), jours de dépassement PM2,5 et ozone, jours dégradés, **potentiel radon** (zonage officiel ASNR via Géorisques).
+- Damier mois × année de l'indice européen, et cycle saisonnier de chaque polluant.
+- Encadré : seuils OMS et européens, pollution d'hiver (chauffage, inversions) et d'été (ozone), limites du modèle.
+- Données : modèle CAMS Europe (Copernicus, maille ≈ 11 km) via Open-Meteo, trois dernières années complètes.
+- **Recalage sur les stations** : statistiques annuelles officielles par station (Agence européenne pour l'environnement, service `AQ_Statistics_WM`, réseau Atmo). Pour chaque station de fond à moins de 20 km, le rapport mesure / modèle (NO₂, PM10, PM2,5) est appliqué aux communes voisines, pleinement en fond de vallée puis de moins en moins jusqu'à 1 000 m au-dessus de la station. L'ozone n'est pas recalé. Les stations proches (fond et trafic) sont listées sur la fiche avec leurs mesures.
 
 ## Licence
 
