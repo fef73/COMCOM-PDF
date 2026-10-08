@@ -84,14 +84,16 @@ const mean=a=>{const b=a.filter(ok);return b.length?b.reduce((s,x)=>s+x,0)/b.len
 const f1=v=>ok(v)?v.toFixed(1).replace('.',','):'–';
 const f0=v=>ok(v)?Math.round(v).toLocaleString('fr-FR'):'–';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function getJSON(url,tries=4){
-  for(let i=0;i<tries;i++){
-    const r=await fetch(url);
-    if(r.ok) return r.json();
-    if(r.status===429||r.status>=500){await sleep(4000*(i+1));continue;}
-    throw new Error('HTTP '+r.status);
+async function getJSON(url){
+  const r=await fetch(url);
+  if(r.ok) return r.json();
+  let why=''; try{why=(await r.json()).reason||'';}catch(e){}
+  if(r.status===429){
+    if(/hour/i.test(why)) throw new Error('quota horaire Open-Meteo atteint : reprenez dans une heure (les communes déjà chargées sont gardées)');
+    if(/day/i.test(why)) throw new Error('quota journalier Open-Meteo atteint : reprenez demain (les communes déjà chargées sont gardées)');
+    throw new Error('quota minute Open-Meteo atteint : patientez une minute puis cliquez sur Continuer');
   }
-  throw new Error('Service indisponible (trop de requêtes), réessayez dans une minute');
+  throw new Error('HTTP '+r.status+(why?' – '+why:''));
 }
 const LAST = new Date().getFullYear()-1;      // dernière année complète
 const N0=1991, N1=2020;                         // normales
@@ -110,20 +112,13 @@ $('bSearch').onclick=async()=>{
 $('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
 $('bPrint').onclick=()=>window.print();
 
-// ---------- Données climat (ERA5 via Open-Meteo, plusieurs points par requête) ----------
+// ---------- Données climat (ERA5 via Open-Meteo) ----------
+// Une requête par commune ; 4 communes par clic, puis la main revient à l'utilisateur.
+// Les agrégats annuels (légers) sont gardés dans le navigateur : rien n'est rechargé deux fois.
 const VARS='temperature_2m_mean,temperature_2m_min,temperature_2m_max,precipitation_sum,snowfall_sum';
-async function fetchClimate(pts){
-  const out=[], B=4;
-  for(let i=0;i<pts.length;i+=B){
-    const g=pts.slice(i,i+B);
-    st(`Données climatiques : communes ${i+1} à ${i+g.length} sur ${pts.length}…`);
-    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${g.map(p=>p.lat).join(',')}&longitude=${g.map(p=>p.lon).join(',')}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&timezone=Europe%2FParis`;
-    let j=await getJSON(url); if(!Array.isArray(j)) j=[j];
-    out.push(...j);
-    if(i+B<pts.length) await sleep(1500);
-  }
-  return out;
-}
+const LOT=4, CACHE='comcom-v1-'+LAST;
+function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
+function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){}}
 
 // Agrégats annuels d'une série journalière
 function yearly(d){
@@ -142,26 +137,50 @@ function yearly(d){
 }
 function avg(Y,a,b,k){const v=[];for(let y=a;y<=b;y++) if(Y[y]) v.push(Y[y][k]);return mean(v);}
 
-// ---------- Génération ----------
+// ---------- Génération par lots ----------
+let JOB=null;   // {code, nom, com:[...]}
+$('epci').onchange=()=>{JOB=null;$('bGo').textContent='Générer la fiche';};
+
 $('bGo').onclick=async()=>{
   $('bGo').disabled=true; $('bPrint').disabled=true;
   try{
     const code=$('epci').value, nom=$('epci').selectedOptions[0].text;
-    st('Liste des communes…');
-    const com=(await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`))
-      .filter(c=>c.centre).map(c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1]}));
-    const cl=await fetchClimate(com);
-    com.forEach((c,i)=>{
-      const Y=yearly(cl[i].daily);
-      c.alt=cl[i].elevation; c.Y=Y;
-      c.tN=avg(Y,N0,N1,'t'); c.tR=avg(Y,R0,LAST,'t'); c.dT=c.tR-c.tN;
-      c.pN=avg(Y,N0,N1,'p'); c.sN=avg(Y,N0,N1,'s'); c.sR=avg(Y,R0,LAST,'s');
-      c.gN=avg(Y,N0,N1,'gel'); c.gR=avg(Y,R0,LAST,'gel'); c.hR=avg(Y,R0,LAST,'chaud');
-    });
-    com.sort((a,b)=>a.alt-b.alt);
-    render(nom,com);
-    $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
-  }catch(e){st('Erreur : '+e.message);}
+    if(!JOB||JOB.code!==code){
+      st('Liste des communes…');
+      const com=(await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,population`))
+        .filter(c=>c.centre).map(c=>({nom:c.nom,insee:c.code,pop:c.population||0,lon:c.centre.coordinates[0],lat:c.centre.coordinates[1]}));
+      com.forEach(c=>{const k=cacheGet(c.insee); if(k){c.alt=k.alt;c.Y=k.Y;}});
+      JOB={code,nom,com};
+    }
+    const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
+    for(let i=0;i<lot.length;i++){
+      const c=lot[i], n=JOB.com.length-todo.length+i+1;
+      st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`);
+      const j=await getJSON(`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&timezone=Europe%2FParis`);
+      c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(c.insee,{alt:c.alt,Y:c.Y});
+    }
+    const reste=JOB.com.filter(c=>!c.Y).length;
+    if(reste){
+      const fait=JOB.com.length-reste;
+      $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
+      st(`${fait}/${JOB.com.length} communes chargées. Attendez environ une minute, puis cliquez sur « Continuer ».`);
+    }else{
+      const com=JOB.com.map(c=>{
+        const Y=c.Y;
+        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),sN:avg(Y,N0,N1,'s'),sR:avg(Y,R0,LAST,'s'),
+          gN:avg(Y,N0,N1,'gel'),gR:avg(Y,R0,LAST,'gel'),hR:avg(Y,R0,LAST,'chaud')};
+      });
+      com.forEach(c=>c.dT=c.tR-c.tN);
+      com.sort((a,b)=>a.alt-b.alt);
+      render(JOB.nom,com);
+      $('bGo').textContent='Générer la fiche';
+      $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
+    }
+  }catch(e){
+    const fait=JOB?JOB.com.filter(c=>c.Y).length:0;
+    if(JOB) $('bGo').textContent='Continuer';
+    st(`Pause : ${e.message}.`+(JOB?` (${fait}/${JOB.com.length} communes chargées)`:''));
+  }
   $('bGo').disabled=false;
 };
 
