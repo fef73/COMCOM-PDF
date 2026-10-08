@@ -17,6 +17,12 @@
   .panel{max-width:210mm;margin:16px auto;background:#fff;padding:16px;border-radius:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .panel .grow{flex:1;min-width:200px}
   #status{width:100%;font-size:13px;color:var(--mute)}
+  #chrono{width:100%;display:none;align-items:center;gap:10px}
+  #chrono.on{display:flex}
+  #chrono b{font:600 22px/1 "Segoe UI",Roboto,monospace;color:var(--acc);min-width:64px;font-variant-numeric:tabular-nums}
+  #chrono .bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+  #chrono .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width 1s linear}
+  #chrono span{font-size:12px;color:var(--mute)}
   /* Fiche A4 */
   #sheet{width:210mm;min-height:297mm;margin:0 auto 24px;background:#fff;padding:12mm 13mm;display:none}
   #sheet.on{display:block}
@@ -61,6 +67,7 @@
   <select id="epci" class="grow" style="display:none"></select>
   <button id="bGo" disabled>Générer la fiche</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
+  <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
   <div id="status"></div>
 </div>
 
@@ -137,6 +144,28 @@ function yearly(d){
 }
 function avg(Y,a,b,k){const v=[];for(let y=a;y<=b;y++) if(Y[y]) v.push(Y[y][k]);return mean(v);}
 
+// ---------- Chronomètre ----------
+let TICK=null;
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+function chronoStop(){clearInterval(TICK);TICK=null;$('chrono').classList.remove('on');}
+// Compte à rebours : le bouton Continuer se réactive tout seul à zéro
+function attente(sec,label){
+  chronoStop(); $('bGo').disabled=true;
+  const fin=Date.now()+sec*1000; $('chrono').classList.add('on'); $('chL').textContent=label;
+  const maj=()=>{
+    const r=Math.max(0,Math.ceil((fin-Date.now())/1000));
+    $('chT').textContent=mmss(r); $('chBar').style.width=(100*(sec-r)/sec)+'%';
+    if(r===0){chronoStop(); $('bGo').disabled=false; st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
+  };
+  maj(); TICK=setInterval(maj,1000);
+}
+// Chronomètre montant pendant un chargement
+function enCours(label){
+  chronoStop(); const t0=Date.now(); $('chrono').classList.add('on'); $('chL').textContent=label; $('chBar').style.width='0';
+  const maj=()=>$('chT').textContent=mmss(Math.floor((Date.now()-t0)/1000));
+  maj(); TICK=setInterval(maj,1000);
+}
+
 // ---------- Génération par lots ----------
 let JOB=null;   // {code, nom, com:[...]}
 $('epci').onchange=()=>{JOB=null;$('bGo').textContent='Générer la fiche';};
@@ -155,7 +184,7 @@ $('bGo').onclick=async()=>{
     const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
     for(let i=0;i<lot.length;i++){
       const c=lot[i], n=JOB.com.length-todo.length+i+1;
-      st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`);
+      st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
       const j=await getJSON(`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31&daily=${VARS}&timezone=Europe%2FParis`);
       c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(c.insee,{alt:c.alt,Y:c.Y});
     }
@@ -163,7 +192,8 @@ $('bGo').onclick=async()=>{
     if(reste){
       const fait=JOB.com.length-reste;
       $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
-      st(`${fait}/${JOB.com.length} communes chargées. Attendez environ une minute, puis cliquez sur « Continuer ».`);
+      st(`${fait}/${JOB.com.length} communes chargées. Pause imposée par Open-Meteo avant le lot suivant.`);
+      attente(65,'avant le lot suivant');
     }else{
       const com=JOB.com.map(c=>{
         const Y=c.Y;
@@ -172,7 +202,7 @@ $('bGo').onclick=async()=>{
       });
       com.forEach(c=>c.dT=c.tR-c.tN);
       com.sort((a,b)=>a.alt-b.alt);
-      render(JOB.nom,com);
+      chronoStop(); render(JOB.nom,com);
       $('bGo').textContent='Générer la fiche';
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
@@ -180,8 +210,11 @@ $('bGo').onclick=async()=>{
     const fait=JOB?JOB.com.filter(c=>c.Y).length:0;
     if(JOB) $('bGo').textContent='Continuer';
     st(`Pause : ${e.message}.`+(JOB?` (${fait}/${JOB.com.length} communes chargées)`:''));
+    chronoStop();
+    if(/minute/.test(e.message)) attente(65,'quota minute');
+    else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
   }
-  $('bGo').disabled=false;
+  if(!TICK||$('chL').textContent==='Chargement en cours'){chronoStop(); $('bGo').disabled=false;}
 };
 
 // ---------- Graphiques SVG ----------
