@@ -169,6 +169,7 @@
   <button id="bGo" disabled>Générer la fiche</button>
   <button id="bStop" style="display:none">■ Arrêter le téléchargement</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
+  <a id="bMeteo" class="navlink" target="_blank" rel="noopener" style="display:none" title="Ouvrir la météo actuelle et les prévisions des communes cochées (comparateur-temperatures)">🌦 Météo des communes</a>
   <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
   <div id="status"></div>
 </div>
@@ -309,16 +310,36 @@ function ficheURL(c){
   const a=ok(c.altFix)?c.altFix:c.alt; if(ok(a)&&a>=1400) q.set('ski','1');   // commune d'altitude : cumul de neige par saison
   return MAIRIES_URL+'?'+q.toString();
 }
+// Météo actuelle et prévisions (comparateur-temperatures), appelée par lien : ?points=lat,lon,alt,nom;…
+const METEO_URL='https://fef73.github.io/comparateur-temperatures/';
+const altC=c=>ok(c.altFix)?c.altFix:ok(c.alt)?c.alt:c.altDem;
+function meteoURL(L){
+  const pts=L.map(c=>{const a=altC(c); return [c.lat.toFixed(4),c.lon.toFixed(4),ok(a)?Math.round(a):'',(c.nomFiche||c.nom).replace(/[;,]/g,' ')].join(',');});
+  return METEO_URL+'?'+new URLSearchParams({points:pts.join(';')}).toString();
+}
+// Au-delà de 8 communes le graphique devient illisible : la plus basse, la plus haute, puis les plus peuplées
+function communesMeteo(){
+  const L=LIST.filter(c=>c.on); if(L.length<=8) return L;
+  const t=[...L].sort((a,b)=>(altC(a)||0)-(altC(b)||0)), sel=[t[0],t[t.length-1]];
+  [...L].sort((a,b)=>(b.pop||0)-(a.pop||0)).forEach(c=>{if(sel.length<8&&!sel.includes(c)) sel.push(c);});
+  return sel.sort((a,b)=>(altC(a)||0)-(altC(b)||0));
+}
+function majMeteo(){
+  const L=communesMeteo(), n=LIST.filter(c=>c.on).length;
+  $('bMeteo').style.display=L.length?'':'none';
+  if(L.length){ $('bMeteo').href=meteoURL(L); $('bMeteo').textContent=`🌦 Météo des communes${n>8?' (8 sur '+n+')':''}`; }
+}
 function afficherListe(){
   $('coms').innerHTML=LIST.map((c,i)=>`<label class="${c.ext?'ext':''}" title="${c.nom} (${c.insee})${c.Y?' – données déjà chargées':''}">
     <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> <span class="n">${c.nom}</span> <small>${altTxt(c)}</small>${c.Y?' ✓':''}
+    <a class="fiche" href="${meteoURL([c])}" target="_blank" rel="noopener" title="Météo actuelle et prévisions à ${c.nom}">🌦</a>
     <a class="fiche" href="${ficheURL(c)}" target="_blank" rel="noopener" title="Ouvrir la fiche climat communale de ${c.nom}">📄</a>
     ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
   const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
   $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
   $('bGo').disabled=!n||!!TICK;
   $('bGo').textContent='Générer la fiche';
-  majNav();
+  majNav(); majMeteo();
 }
 $('coms').onclick=e=>{
   if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();return;}
