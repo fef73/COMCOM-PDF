@@ -66,6 +66,8 @@
   .addf .lnk{color:var(--text-lo);cursor:pointer;text-decoration:underline}
   .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
   #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+  #bStop{border-color:var(--danger);color:var(--danger)}
+  #bStop:hover{background:var(--danger);color:#0b1622}
   #sugg button{color:var(--live);border-color:var(--hairline);padding:5px 10px;font-size:11.5px}
   #sugg #aOk{background:var(--live);color:#0b1622;border-color:var(--live);font-size:13px;font-weight:700;padding:8px 16px}
   #sugg #aOk:hover{box-shadow:0 0 0 3px rgba(126,228,184,.25)}
@@ -163,6 +165,7 @@
     </div>
   </div>
   <button id="bGo" disabled>Générer la fiche</button>
+  <button id="bStop" style="display:none">■ Arrêter le téléchargement</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
   <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
   <div id="status"></div>
@@ -373,7 +376,7 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
 // et le recalage sur les stations peut être refait à chaque fiche.
 const A0=LAST-2;                                  // période : 3 dernières années complètes
 const VARS='pm2_5,pm10,nitrogen_dioxide,ozone,european_aqi';
-const LOT=4, CACHE='comair-v2-'+A0+'-'+LAST;
+const LOT=1, PAUSE=15, CACHE='comair-v2-'+A0+'-'+LAST;
 function cacheGet(k){try{return JSON.parse(localStorage.getItem(CACHE+'-'+k));}catch(e){return null;}}
 function cacheSet(k,v){try{localStorage.setItem(CACHE+'-'+k,JSON.stringify(v));}catch(e){} cacheInfo();}
 // Indice européen (EEA) : classes de 20 en 20 ; libellés alignés sur la fiche communale
@@ -484,13 +487,14 @@ let TICK=null;
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function chronoStop(){clearInterval(TICK);TICK=null;$('chrono').classList.remove('on');}
 // Compte à rebours : le bouton Continuer se réactive tout seul à zéro
-function attente(sec,label){
+function attente(sec,label,auto){
   chronoStop(); $('bGo').disabled=true;
   const fin=Date.now()+sec*1000; $('chrono').classList.add('on'); $('chL').textContent=label;
   const maj=()=>{
     const r=Math.max(0,Math.ceil((fin-Date.now())/1000));
     $('chT').textContent=mmss(r); $('chBar').style.width=(100*(sec-r)/sec)+'%';
-    if(r===0){chronoStop(); $('bGo').disabled=false; st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
+    if(r===0){chronoStop(); $('bGo').disabled=false;
+      if(auto&&!STOP) $('bGo').click(); else st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
   };
   maj(); TICK=setInterval(maj,1000);
 }
@@ -572,7 +576,16 @@ function facteurs(c,st){
 }
 
 // ---------- Génération par lots ----------
+// Téléchargement automatique : une commune, pause de PAUSE s, commune suivante… jusqu'à la fin ou l'arrêt
+let STOP=false;
+$('bStop').onclick=()=>{
+  STOP=true; chronoStop(); $('bStop').style.display='none'; $('bGo').disabled=false;
+  const L=LIST.filter(c=>c.on), fait=L.filter(c=>c.Y).length;
+  $('bGo').textContent='Reprendre le téléchargement';
+  st(`Téléchargement arrêté (${fait}/${L.length} communes en cache). Cliquez sur « Reprendre » pour continuer.`);
+};
 $('bGo').onclick=async()=>{
+  chronoStop(); STOP=false; $('bStop').style.display='';   // un clic pendant la pause relance aussitôt
   $('bGo').disabled=true; $('bPrint').disabled=true;
   const JOB={nom:$('titre').value.trim()||"Qualité de l'air", com:LIST.filter(c=>c.on)};
   try{
@@ -582,18 +595,20 @@ $('bGo').onclick=async()=>{
     JOB.charge=[...JOB.com,...stations.filter(s=>s.fond)];
     const todo=JOB.charge.filter(c=>!c.Y), lot=todo.slice(0,LOT);
     for(let i=0;i<lot.length;i++){
+      if(STOP) return;
       const c=lot[i], n=JOB.charge.length-todo.length+i+1;
       st(`Qualité de l'air : ${c.insee.startsWith('st-')?'station '+c.nom:c.nom} (${n}/${JOB.charge.length})…`); enCours('Chargement en cours');
       const j=await getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${c.lat}&longitude=${c.lon}&hourly=${VARS}&domains=cams_europe&start_date=${A0}-01-01&end_date=${LAST}-12-31&timezone=Europe%2FParis`);
       if(!j.hourly||!j.hourly.european_aqi||!j.hourly.european_aqi.some(ok)) throw new Error('données de qualité de l\'air absentes pour '+c.nom);
       c.Y=journalier(j.hourly); cacheSet(c.insee.startsWith('st-')?c.insee:cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
+      if(STOP){afficherListe(); $('bGo').textContent='Reprendre le téléchargement'; return;}   // la commune en cours est gardée
     }
     const reste=JOB.charge.filter(c=>!c.Y).length;
     if(reste){
       const fait=JOB.charge.length-reste;
-      $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
-      st(`${fait}/${JOB.charge.length} points chargés (communes et stations). Pause imposée par Open-Meteo avant le lot suivant.`);
-      attente(65,'avant le lot suivant');
+      $('bGo').textContent='Continuer maintenant';
+      st(`${fait}/${JOB.charge.length} points chargés (communes et stations). Suite automatique dans ${PAUSE} s.`);
+      attente(PAUSE,'avant le suivant',true); $('bGo').disabled=false;
     }else{
       st('Zonage radon…'); enCours('Radon');
       const ins=[...new Set(JOB.com.map(c=>c.insee))], R={};
@@ -605,7 +620,7 @@ $('bGo').onclick=async()=>{
       }).filter(c=>c.S);
       if(!com.length) throw new Error('aucune donnée exploitable sur la période');
       com.sort((a,b)=>a.alt-b.alt);
-      chronoStop(); render(JOB.nom,com,stations);
+      chronoStop(); $('bStop').style.display='none'; render(JOB.nom,com,stations);
       $('bGo').textContent='Générer la fiche';
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
@@ -614,8 +629,9 @@ $('bGo').onclick=async()=>{
     $('bGo').textContent='Continuer';
     st(`Pause : ${e.message}.`+` (${fait}/${L.length} points chargés)`);
     chronoStop();
-    if(/minute/.test(e.message)) attente(65,'quota minute');
-    else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
+    if(/minute/.test(e.message)) attente(65,'quota minute — reprise automatique',true);
+    else if(/horaire/.test(e.message)) attente(3600,'quota horaire — reprise automatique',true);
+    else $('bStop').style.display='none';
   }
   if(!TICK||['Chargement en cours','Radon'].includes($('chL').textContent)){chronoStop(); $('bGo').disabled=false;}
 };
