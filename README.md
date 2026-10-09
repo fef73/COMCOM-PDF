@@ -17,6 +17,7 @@ Site : https://fef73.github.io/COMCOM-PDF/ — accès protégé par mot de passe
 - En-tête : nombre de communes, habitants (une commune ajoutée plusieurs fois n'est comptée qu'une fois), plage d'altitude.
 - Indicateurs : température moyenne normale 1991–2020, écart de la dernière décennie, évolution de la neige, année la plus chaude.
 - Tableau par commune : altitude, habitants, température, écart récent, précipitations, cumul de neige fraîche (normale et décennie récente), jours de gel, jours ≥ 30 °C.
+  - Les jours de gel (température minimale sous 0 °C) et les jours ≥ 30 °C (température maximale) sont des **moyennes annuelles** : sur 1991–2020 pour la normale, sur les dix dernières années pour la période récente. Le nombre de jours ≥ 30 °C garde donc une décimale : 6,2 signifie 62 jours en dix ans, 0,3 environ 3 jours en dix ans. Arrondir à l'entier ferait passer à 0 des communes où il fait encore parfois 30 °C.
 - Graphiques : écart annuel de température du territoire depuis 1991, température selon l'altitude.
 - Tableau des **postes Météo-France proches** avec la neige fraîche réellement mesurée.
 - Encadré « Comment lire » qui explique l'origine des chiffres de pluie et de neige.
