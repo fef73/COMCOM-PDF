@@ -394,6 +394,16 @@ $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 $('titre').oninput=majNav;
 function clesPack(){return [...LIST.filter(c=>!c.ext).map(c=>[cleC(c),c]), ...(STA||[]).filter(s=>s.fond).map(s=>[s.insee,s])];}
 
+// Enregistrement d'un fichier avec le BON NOM, y compris sur smartphone :
+// le lien est ajouté à la page et l'adresse temporaire n'est libérée qu'après une minute
+// (si on la libère tout de suite, Chrome Android donne au fichier un nom aléatoire).
+function telecharger(nom,texte){
+  const f=new File([texte],nom,{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=nom; a.style.display='none';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},60000);
+}
+
 // ---------- Données précalculées (packs par intercommunalité) ----------
 // Un pack = toutes les données d'une intercommunalité, publié dans le dépôt : donnees/<version>/<code EPCI>.json
 // La page le lit en premier : la fiche s'affiche sans téléchargement ni quota.
@@ -416,11 +426,9 @@ function exporterPack(){
   clesPack().forEach(([k,c])=>{ const v=c.Y?{alt:c.alt,Y:c.Y}:cacheGet(k); if(v&&v.Y) items[k]=v; else manque.push(c.nom); });
   if(manque.length){st(`Pack incomplet : ${manque.length} point(s) non chargé(s) (${manque.slice(0,3).join(', ')}…). Générez d'abord la fiche.`);return false;}
   const pack={version:CACHE,genere:new Date().toISOString(),epci:code,nom:$('epci').selectedOptions[0].text,items};
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(pack)],{type:'application/json'}));
-  a.download=`${code}.json`; a.click(); URL.revokeObjectURL(a.href);
+  telecharger(`${code}.json`,JSON.stringify(pack));
   try{localStorage.setItem('packfait-'+CACHE+'-'+code,'1');}catch(e){}
-  st(`Pack ${code}.json enregistré (${Object.keys(items).length} points). À déposer dans le dépôt : donnees/${CACHE}/`);
+  st(`Pack « ${code}.json » (${$('epci').selectedOptions[0].text}) enregistré (${Object.keys(items).length} points). À déposer dans le dépôt : donnees/${CACHE}/`);
   return true;
 }
 $('bPack').onclick=exporterPack;
@@ -515,10 +523,7 @@ function cacheInfo(){
 $('bSave').onclick=()=>{
   const o={}; cacheKeys().forEach(k=>o[k]=localStorage.getItem(k));
   if(!Object.keys(o).length){st('Le cache est vide : rien à enregistrer.');return;}
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));
-  a.download=`cache-comair-${new Date().toISOString().slice(0,10)}.json`; a.click();
-  URL.revokeObjectURL(a.href);
+  telecharger(`cache-comair-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(o));
 };
 $('bLoad').onclick=()=>$('fLoad').click();
 $('fLoad').onchange=async e=>{
