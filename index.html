@@ -64,6 +64,8 @@
   .addf .lnk{color:var(--text-lo);cursor:pointer;text-decoration:underline}
   .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
   #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+  #bStop{border-color:var(--danger);color:var(--danger)}
+  #bStop:hover{background:var(--danger);color:#0b1622}
   #sugg button{color:var(--live);border-color:var(--hairline);padding:5px 10px;font-size:11.5px}
   #sugg #aOk{background:var(--live);color:#0b1622;border-color:var(--live);font-size:13px;font-weight:700;padding:8px 16px}
   #sugg #aOk:hover{box-shadow:0 0 0 3px rgba(126,228,184,.25)}
@@ -153,6 +155,7 @@
     </div>
   </div>
   <button id="bGo" disabled>Générer la fiche</button>
+  <button id="bStop" style="display:none">■ Arrêter le téléchargement</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
   <div id="chrono"><b id="chT">0:00</b><div class="bar"><i id="chBar"></i></div><span id="chL"></span></div>
   <div id="status"></div>
@@ -357,7 +360,7 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
 // Températures : ERA5-Land (≈ 9 km, corrigées selon l'altitude).
 // Précipitations : ERA5 (≈ 25 km), car Open-Meteo ne fournit pas les précipitations ERA5-Land.
 const VARS_T='temperature_2m_mean,temperature_2m_min,temperature_2m_max', VARS_P='precipitation_sum';
-const LOT=4, CACHE='comcom-v4-'+LAST;
+const LOT=1, PAUSE=15, CACHE='comcom-v4-'+LAST;
 function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
 function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){} cacheInfo();}
 
@@ -421,13 +424,14 @@ let TICK=null;
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function chronoStop(){clearInterval(TICK);TICK=null;$('chrono').classList.remove('on');}
 // Compte à rebours : le bouton Continuer se réactive tout seul à zéro
-function attente(sec,label){
+function attente(sec,label,auto){
   chronoStop(); $('bGo').disabled=true;
   const fin=Date.now()+sec*1000; $('chrono').classList.add('on'); $('chL').textContent=label;
   const maj=()=>{
     const r=Math.max(0,Math.ceil((fin-Date.now())/1000));
     $('chT').textContent=mmss(r); $('chBar').style.width=(100*(sec-r)/sec)+'%';
-    if(r===0){chronoStop(); $('bGo').disabled=false; st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
+    if(r===0){chronoStop(); $('bGo').disabled=false;
+      if(auto&&!STOP) $('bGo').click(); else st('Vous pouvez continuer : cliquez sur « '+$('bGo').textContent+' ».');}
   };
   maj(); TICK=setInterval(maj,1000);
 }
@@ -528,12 +532,22 @@ function recaler(com){
 }
 
 // ---------- Génération par lots ----------
+// Téléchargement automatique : une commune, pause de PAUSE s, commune suivante… jusqu'à la fin ou l'arrêt
+let STOP=false;
+$('bStop').onclick=()=>{
+  STOP=true; chronoStop(); $('bStop').style.display='none'; $('bGo').disabled=false;
+  const L=LIST.filter(c=>c.on), fait=L.filter(c=>c.Y).length;
+  $('bGo').textContent='Reprendre le téléchargement';
+  st(`Téléchargement arrêté (${fait}/${L.length} communes en cache). Cliquez sur « Reprendre » pour continuer.`);
+};
 $('bGo').onclick=async()=>{
+  chronoStop(); STOP=false; $('bStop').style.display='';   // un clic pendant la pause relance aussitôt
   $('bGo').disabled=true; $('bPrint').disabled=true;
   const JOB={nom:$('titre').value.trim()||'Fiche climat', com:LIST.filter(c=>c.on)};
   try{
     const todo=JOB.com.filter(c=>!c.Y), lot=todo.slice(0,LOT);
     for(let i=0;i<lot.length;i++){
+      if(STOP) return;
       const c=lot[i], n=JOB.com.length-todo.length+i+1;
       st(`Données climatiques : ${c.nom} (${n}/${JOB.com.length})…`); enCours('Chargement en cours');
       const base=`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${LAST}-12-31${ok(c.altFix)?'&elevation='+c.altFix:''}&timezone=Europe%2FParis`;
@@ -544,13 +558,14 @@ $('bGo').onclick=async()=>{
       j.daily.precipitation_sum=j.daily.time.map(t=>P[t]);
       if(!j.daily.precipitation_sum.some(ok)) throw new Error('précipitations absentes de la réponse Open-Meteo pour '+c.nom);
       c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
+      if(STOP){$('bGo').textContent='Reprendre le téléchargement'; return;}   // la commune en cours est gardée
     }
     const reste=JOB.com.filter(c=>!c.Y).length;
     if(reste){
       const fait=JOB.com.length-reste;
-      $('bGo').textContent=`Continuer (${Math.min(LOT,reste)} communes suivantes)`;
-      st(`${fait}/${JOB.com.length} communes chargées. Pause imposée par Open-Meteo avant le lot suivant.`);
-      attente(65,'avant le lot suivant');
+      $('bGo').textContent='Continuer maintenant';
+      st(`${fait}/${JOB.com.length} communes chargées. Suite automatique dans ${PAUSE} s.`);
+      attente(PAUSE,'avant la suivante',true); $('bGo').disabled=false;
     }else{
       const com=JOB.com.map(c=>{
         const Y=c.Y;
@@ -560,7 +575,7 @@ $('bGo').onclick=async()=>{
       com.forEach(c=>c.dT=c.tR-c.tN);
       com.sort((a,b)=>a.alt-b.alt);
       const cal=recaler(com);
-      chronoStop(); render(JOB.nom,com,cal);
+      chronoStop(); $('bStop').style.display='none'; render(JOB.nom,com,cal);
       $('bGo').textContent='Générer la fiche';
       $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
@@ -569,8 +584,9 @@ $('bGo').onclick=async()=>{
     $('bGo').textContent='Continuer';
     st(`Pause : ${e.message}.`+` (${fait}/${JOB.com.length} communes chargées)`);
     chronoStop();
-    if(/minute/.test(e.message)) attente(65,'quota minute');
-    else if(/horaire/.test(e.message)) attente(3600,'quota horaire');
+    if(/minute/.test(e.message)) attente(65,'quota minute — reprise automatique',true);
+    else if(/horaire/.test(e.message)) attente(3600,'quota horaire — reprise automatique',true);
+    else $('bStop').style.display='none';
   }
   if(!TICK||$('chL').textContent==='Chargement en cours'){chronoStop(); $('bGo').disabled=false;}
 };
