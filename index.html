@@ -58,6 +58,8 @@
   #coms label .n{overflow:hidden;text-overflow:ellipsis;min-width:0}
   #coms label small{flex-shrink:0;color:var(--text-lo);font-family:'IBM Plex Mono',monospace;font-size:11px}
   #coms label.ext{color:var(--gold);font-style:italic}
+  #coms .fiche{text-decoration:none;flex-shrink:0;opacity:.55;font-size:12px}
+  #coms .fiche:hover{opacity:1}
   #coms .x{color:var(--danger);cursor:pointer;margin-left:auto;padding:0 4px}
   .addf{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;width:100%;background:var(--bg-card);border:1px solid var(--hairline);padding:10px;border-radius:10px}
   .addf input{padding:6px 10px;font-size:13px}
@@ -263,9 +265,19 @@ async function chargerListe(){
     if(!new URLSearchParams(location.search).get('ajouts')) setTimeout(demarrageAuto,300);
   }catch(e){st('Erreur : '+e.message);}
 }
+// Fiche communale (générateur mairies-pdf), ouverte toute prête grâce au lancement par URL
+const MAIRIES_URL='https://fef73.github.io/mairies-pdf/';
+function ficheURL(c){
+  const q=new URLSearchParams({insee:c.insee});
+  if(ok(c.altFix)) q.set('alt',c.altFix);
+  if(c.ext&&c.nomFiche) q.set('nom',c.nomFiche);
+  const a=ok(c.altFix)?c.altFix:c.alt; if(ok(a)&&a>=1400) q.set('ski','1');   // commune d'altitude : cumul de neige par saison
+  return MAIRIES_URL+'?'+q.toString();
+}
 function afficherListe(){
   $('coms').innerHTML=LIST.map((c,i)=>`<label class="${c.ext?'ext':''}" title="${c.nom} (${c.insee})${c.Y?' – données déjà chargées':''}">
     <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> <span class="n">${c.nom}</span> <small>${altTxt(c)}</small>${c.Y?' ✓':''}
+    <a class="fiche" href="${ficheURL(c)}" target="_blank" rel="noopener" title="Ouvrir la fiche climat communale de ${c.nom}">📄</a>
     ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
   const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
   $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
