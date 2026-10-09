@@ -47,6 +47,10 @@
   #bSearch,#bGo,#aOk,.lock button{background:var(--live);color:#0b1622;border-color:var(--live);font-weight:600}
   .err{color:var(--danger);font-size:13px;min-height:1em}
   .panel{max-width:210mm;margin:0 auto 14px;background:var(--bg-panel);border:1px solid var(--hairline);padding:16px;border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .terr{width:100%;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+  .terr label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--live)}
+  .terr select{flex:1;min-width:240px}
+  .terr .ou{font-size:12px;color:var(--text-lo)}
   .panel .grow{flex:1;min-width:200px}
   #status{width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
   #liste{width:100%;display:none;border-top:1px solid var(--hairline);padding-top:12px}
@@ -150,6 +154,11 @@
 </header>
 
 <div class="panel">
+  <div class="terr">
+    <label for="dep73">Territoire de la Savoie</label>
+    <select id="dep73"><option value="">Choisir une intercommunalité de Savoie…</option></select>
+    <span class="ou">ou rechercher ailleurs :</span>
+  </div>
   <input class="grow" id="q" placeholder="Nom de la communauté de communes" value="Cœur de Maurienne Arvan">
   <button id="bSearch">Rechercher</button>
   <select id="epci" class="grow" style="display:none"></select>
@@ -243,6 +252,25 @@ $('bSearch').onclick=async()=>{
   }catch(e){st('Erreur : '+e.message);}
 };
 $('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
+// ---------- Choix direct d'une intercommunalité de Savoie ----------
+const DEP_TERR='73';
+(async()=>{
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis?codeDepartement=${DEP_TERR}&fields=nom,code,population`);
+    const nomTri=n=>n.replace(/^(CC|CA|CU)\s+(du |de la |des |de l'|d'|de )?/i,'');
+    l.sort((a,b)=>nomTri(a.nom).localeCompare(nomTri(b.nom),'fr'));
+    $('dep73').innerHTML='<option value="">Choisir une intercommunalité de Savoie…</option>'+
+      l.map(e=>`<option value="${e.code}">${e.nom} · ${(e.population||0).toLocaleString('fr-FR')} hab.</option>`).join('');
+    const cur=new URLSearchParams(location.search).get('epci'); if(cur) $('dep73').value=cur;
+  }catch(e){ $('dep73').innerHTML='<option value="">Liste de la Savoie indisponible : utilisez la recherche</option>'; }
+})();
+$('dep73').onchange=async()=>{
+  const code=$('dep73').value; if(!code) return;
+  const nom=$('dep73').selectedOptions[0].text.replace(/ · .*$/,'');
+  $('epci').innerHTML=`<option value="${code}">${nom}</option>`; $('epci').value=code; $('epci').style.display='';
+  $('q').value=nom.replace(/^(CC|CA|CU)\s+/,'');
+  await chargerListe();
+};
 $('bPrint').onclick=()=>window.print();
 
 // ---------- Liste des communes modifiable ----------
