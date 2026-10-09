@@ -686,15 +686,24 @@ function render(nom,com,stations){
   const cls=(v,a)=>v>a?'hot':'';
   const now=new Date(), per=`${A0}–${LAST}`;
   // Stations affichées : les plus proches du territoire, avec au moins une mesure
-  const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
-  const stL=stations.map(s=>({...s,d:km(ctr,s)})).sort((a,b)=>(b.fond-a.fond)||a.d-b.d).slice(0,5);
+  // Pour chaque commune, la station la plus proche (≤ 20 km) ; une ligne par station, avec les communes concernées
+  const SP=new Map();
+  com.forEach(c=>{
+    const best=stations.map(s=>({s,d:km(c,s)})).filter(x=>x.d<=RST).sort((u,v)=>(v.s.fond-u.s.fond)||u.d-v.d)[0];
+    if(!best) return;
+    const e=SP.get(best.s.id)||{...best.s,d:best.d,communes:[]};
+    e.d=Math.min(e.d,best.d); if(!e.communes.includes(c.nom)) e.communes.push(c.nom); SP.set(best.s.id,e);
+  });
+  // les stations trafic proches sont ajoutées pour information
+  stations.filter(s=>!s.fond&&!SP.has(s.id)).forEach(s=>{const d=Math.min(...com.map(c=>km(c,s))); if(d<=RST) SP.set(s.id,{...s,d,communes:[]});});
+  const stL=[...SP.values()].sort((a,b)=>(b.fond-a.fond)||b.communes.length-a.communes.length||a.d-b.d).slice(0,8);
   const recal=com.filter(c=>c.F&&c.F.st), refs=[...new Set(recal.map(c=>c.F.st))];
   const moyMes=(s,p)=>s.moy&&ok(s.moy[p])?s.moy[p]:(s.mes[p]?mean(Object.values(s.mes[p])):NaN);
   const xk=(s,p)=>s.k&&s.k[p]&&!(p==='pm25'&&s.pm25estime)?` <span style="color:var(--mute)">(modèle ${f1(s.cams[p])})</span>`:'';
   const stTable=stL.length?`<h2>Stations de mesure à proximité</h2>
     <table>
-      <tr><th>Station</th><th>Type</th><th>Distance (km)</th><th>Alt. (m)</th><th>NO₂ moy. mesuré (µg/m³)</th><th>PM10 moy. mesuré (µg/m³)</th><th>PM2,5 moy. mesuré (µg/m³)</th><th>Jours /an ozone &gt; 120 mesurés</th></tr>
-      ${stL.map(s=>`<tr><td>${s.nom}</td><td>${s.fond?'fond':'trafic'}${/urban/i.test(s.zone)&&!/sub/i.test(s.zone)?' urbain':/sub/i.test(s.zone)?' périurbain':' rural'}</td><td>${f0(s.d)}</td><td>${f0(s.alt)}</td>
+      <tr><th>Station</th><th>Type</th><th>Station de référence pour</th><th>Distance (km)</th><th>Alt. (m)</th><th>NO₂ moy. mesuré (µg/m³)</th><th>PM10 moy. mesuré (µg/m³)</th><th>PM2,5 moy. mesuré (µg/m³)</th><th>Jours /an ozone &gt; 120 mesurés</th></tr>
+      ${stL.map(s=>`<tr><td>${s.nom}</td><td>${s.fond?'fond':'trafic'}${/urban/i.test(s.zone)&&!/sub/i.test(s.zone)?' urbain':/sub/i.test(s.zone)?' périurbain':' rural'}</td><td style="text-align:left;white-space:normal">${s.communes.length?s.communes.slice(0,3).join(', ')+(s.communes.length>3?` +${s.communes.length-3}`:''):'–'}</td><td>${f0(s.d)}</td><td>${f0(s.alt)}</td>
         <td>${f1(moyMes(s,'no2'))}${xk(s,'no2')}</td><td>${f1(moyMes(s,'pm10'))}${xk(s,'pm10')}</td><td>${f1(moyMes(s,'pm25'))}${xk(s,'pm25')}</td><td>${s.mes.o3j?f0(mean(Object.values(s.mes.o3j))):'–'}</td></tr>`).join('')}
     </table>`:'';
   const ratioTxt=s=>['no2','pm10','pm25'].filter(p=>s.k&&s.k[p]&&!(p==='pm25'&&s.pm25estime)).map(p=>`${{no2:'NO₂',pm10:'PM10',pm25:'PM2,5'}[p]} × ${f1(s.k[p])}`).join(', ');
