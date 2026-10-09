@@ -210,7 +210,7 @@ async function getJSON(url){
   if(r.status===429){
     if(/hour/i.test(why)) throw new Error('quota horaire Open-Meteo atteint : reprenez dans une heure (les communes déjà chargées sont gardées)');
     if(/day/i.test(why)) throw new Error('quota journalier Open-Meteo atteint : reprenez demain (les communes déjà chargées sont gardées)');
-    throw new Error('quota minute Open-Meteo atteint : patientez une minute puis cliquez sur Continuer');
+    throw new Error('quota minute Open-Meteo atteint : nouvel essai automatique dans 15 s');
   }
   throw new Error('HTTP '+r.status+(why?' – '+why:''));
 }
@@ -584,7 +584,7 @@ $('bGo').onclick=async()=>{
     $('bGo').textContent='Continuer';
     st(`Pause : ${e.message}.`+` (${fait}/${JOB.com.length} communes chargées)`);
     chronoStop();
-    if(/minute/.test(e.message)) attente(65,'quota minute — reprise automatique',true);
+    if(/minute/.test(e.message)) attente(PAUSE,'quota minute — nouvel essai',true);
     else if(/horaire/.test(e.message)) attente(3600,'quota horaire — reprise automatique',true);
     else $('bStop').style.display='none';
   }
