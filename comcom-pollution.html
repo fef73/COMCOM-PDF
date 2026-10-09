@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Qualité de l'air intercommunale</title>
+<title>Qualité de l'air de l'intercommunalité</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -58,6 +58,8 @@
   #coms label .n{overflow:hidden;text-overflow:ellipsis;min-width:0}
   #coms label small{flex-shrink:0;color:var(--text-lo);font-family:'IBM Plex Mono',monospace;font-size:11px}
   #coms label.ext{color:var(--gold);font-style:italic}
+  #coms .fiche{text-decoration:none;flex-shrink:0;opacity:.55;font-size:12px}
+  #coms .fiche:hover{opacity:1}
   #coms .x{color:var(--danger);cursor:pointer;margin-left:auto;padding:0 4px}
   .addf{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;width:100%;background:var(--bg-card);border:1px solid var(--hairline);padding:10px;border-radius:10px}
   .addf input{padding:6px 10px;font-size:13px}
@@ -128,7 +130,7 @@
 
 <div class="lock" id="lock">
   <form id="lockForm">
-    <strong>Qualité de l'air intercommunale</strong>
+    <strong>Qualité de l'air de l'intercommunalité</strong>
     <input type="password" id="pw" placeholder="Mot de passe" autofocus>
     <button>Entrer</button>
     <div class="err" id="pwErr"></div>
@@ -138,9 +140,9 @@
 <header class="top">
   <div class="toprow">
   <div class="eyebrow"><span class="pulse"></span>comparateur-meteo · qualité de l'air</div>
-    <a class="navlink" href="index.html">🌡️ Fiche climat →</a>
+    <a class="navlink" id="nav" data-page="index.html" href="index.html" title="Ouvrir l'autre fiche avec le même territoire">🌡️ Fiche climat →</a>
   </div>
-  <h1>Qualité de l'air intercommunale</h1>
+  <h1>Qualité de l'air de l'intercommunalité</h1>
   <div class="subtitle">Toutes les communes d'une intercommunalité sur une page A4 : particules fines, dioxyde d'azote, ozone et radon, comparés aux seuils de l'OMS.</div>
 </header>
 
@@ -264,14 +266,24 @@ async function chargerListe(){
     st(LIST.length+' communes. Décochez celles à exclure, ajoutez-en si besoin, puis générez la fiche.');
   }catch(e){st('Erreur : '+e.message);}
 }
+// Fiche communale (générateur mairies-pdf), ouverte toute prête grâce au lancement par URL
+const MAIRIES_URL='https://fef73.github.io/mairies-pdf/';
+function ficheURL(c){
+  const q=new URLSearchParams({insee:c.insee,air:'1'});
+  if(ok(c.altFix)) q.set('alt',c.altFix);
+  if(c.ext&&c.nomFiche) q.set('nom',c.nomFiche);
+  return MAIRIES_URL+'?'+q.toString();
+}
 function afficherListe(){
   $('coms').innerHTML=LIST.map((c,i)=>`<label class="${c.ext?'ext':''}" title="${c.nom} (${c.insee})${c.Y?' – données déjà chargées':''}">
     <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> <span class="n">${c.nom}</span> <small>${altTxt(c)}</small>${c.Y?' ✓':''}
+    <a class="fiche" href="${ficheURL(c)}" target="_blank" rel="noopener" title="Ouvrir la fiche communale de ${c.nom} (climat + qualité de l'air)">📄</a>
     ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
   const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
   $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
   $('bGo').disabled=!n||!!TICK;
   $('bGo').textContent='Générer la fiche';
+  majNav();
 }
 $('coms').onclick=e=>{
   if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();return;}
@@ -309,7 +321,7 @@ $('bAdd').onclick=async()=>{
         if(ex) ex.on=true;
         else{
           const n=LIST.filter(x=>x.nom===nom).length;
-          LIST.push(withCache({...p,nom:n?`${nom} (${alt} m)`:nom,altFix,ext:true,on:true}));
+          LIST.push(withCache({...p,nom:n?`${nom} (${alt} m)`:nom,nomFiche:nom!==p.nom?nom:undefined,altFix,ext:true,on:true}));
         }
         $('sugg').innerHTML=''; $('qc').value=''; afficherListe();
       };
@@ -319,6 +331,41 @@ $('bAdd').onclick=async()=>{
   }catch(e){$('sugg').innerHTML='<span style="font-size:12px">Commune introuvable.</span>';}
 };
 $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
+$('titre').oninput=majNav;
+// ---------- Passage d'une fiche à l'autre avec le même territoire ----------
+// Lien : ?epci=CODE&titre=…&exclus=insee,insee&ajouts=insee@alt~nom|insee~nom
+function etatURL(){
+  const q=new URLSearchParams(), code=$('epci').value;
+  if(code&&$('epci').style.display!=='none') q.set('epci',code);
+  if($('titre').value.trim()) q.set('titre',$('titre').value.trim());
+  const ex=LIST.filter(c=>!c.ext&&!c.on).map(c=>c.insee); if(ex.length) q.set('exclus',ex.join(','));
+  const aj=LIST.filter(c=>c.ext&&c.on).map(c=>c.insee+(ok(c.altFix)?'@'+c.altFix:'')+'~'+(c.nomFiche||c.nom.replace(/ \(\d+ m\)$/,'')));
+  if(aj.length) q.set('ajouts',aj.join('|'));
+  return q.toString();
+}
+function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'+etatURL():'');}
+(async()=>{
+  const q=new URLSearchParams(location.search); if(!q.get('epci')&&!q.get('ajouts')) return;
+  try{
+    if(q.get('epci')){
+      const e=await getJSON(`https://geo.api.gouv.fr/epcis/${encodeURIComponent(q.get('epci'))}?fields=nom,code`);
+      $('q').value=e.nom.replace(/^(CC|CA|CU|Métropole)\s+/,''); $('epci').innerHTML=`<option value="${e.code}">${e.nom}</option>`; $('epci').style.display=''; $('epci').value=e.code;
+      await chargerListe();
+      const ex=(q.get('exclus')||'').split(',').filter(Boolean); LIST.forEach(c=>{if(ex.includes(c.insee)) c.on=false;});
+    }
+    for(const it of (q.get('ajouts')||'').split('|').filter(Boolean)){
+      const m=it.match(/^([0-9AB]{5})(?:@(-?\d+))?(?:~(.*))?$/i); if(!m) continue;
+      const c=await getJSON(`https://geo.api.gouv.fr/communes/${m[1]}?fields=nom,code,centre,mairie,population`);
+      const p=(await altitudes([toCom(c)]))[0], altFix=m[2]!==undefined?+m[2]:undefined, nom=m[3]||p.nom;
+      const n=LIST.filter(x=>x.nom===nom).length;
+      LIST.push(withCache({...p,nom:n&&ok(altFix)?`${nom} (${altFix} m)`:nom,nomFiche:nom!==p.nom?nom:undefined,altFix,ext:true,on:true}));
+    }
+    if(q.get('titre')) $('titre').value=q.get('titre');
+    $('liste').classList.add('on'); afficherListe();
+    st('Territoire repris de l\'autre fiche. Cliquez sur « Générer la fiche ».');
+  }catch(e){st('Territoire du lien introuvable : '+e.message);}
+})();
+
 
 // ---------- Données qualité de l'air (CAMS Europe via Open-Meteo) ----------
 // Une requête par commune (heure par heure, 3 années complètes) ; 4 communes par clic.
