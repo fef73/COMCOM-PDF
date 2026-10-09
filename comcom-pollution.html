@@ -217,7 +217,7 @@ async function getJSON(url){
   if(r.status===429){
     if(/hour/i.test(why)) throw new Error('quota horaire Open-Meteo atteint : reprenez dans une heure (les communes déjà chargées sont gardées)');
     if(/day/i.test(why)) throw new Error('quota journalier Open-Meteo atteint : reprenez demain (les communes déjà chargées sont gardées)');
-    throw new Error('quota minute Open-Meteo atteint : nouvel essai automatique dans 15 s');
+    throw new Error('quota minute Open-Meteo atteint : nouvel essai automatique dans 1 minute');
   }
   throw new Error('HTTP '+r.status+(why?' – '+why:''));
 }
@@ -376,7 +376,7 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
 // et le recalage sur les stations peut être refait à chaque fiche.
 const A0=LAST-2;                                  // période : 3 dernières années complètes
 const VARS='pm2_5,pm10,nitrogen_dioxide,ozone,european_aqi';
-const LOT=1, PAUSE=15, CACHE='comair-v2-'+A0+'-'+LAST;
+const LOT=4, PAUSE=65, CACHE='comair-v2-'+A0+'-'+LAST;
 function cacheGet(k){try{return JSON.parse(localStorage.getItem(CACHE+'-'+k));}catch(e){return null;}}
 function cacheSet(k,v){try{localStorage.setItem(CACHE+'-'+k,JSON.stringify(v));}catch(e){} cacheInfo();}
 // Indice européen (EEA) : classes de 20 en 20 ; libellés alignés sur la fiche communale
@@ -607,7 +607,7 @@ $('bGo').onclick=async()=>{
     if(reste){
       const fait=JOB.charge.length-reste;
       $('bGo').textContent='Continuer maintenant';
-      st(`${fait}/${JOB.charge.length} points chargés (communes et stations). Suite automatique dans ${PAUSE} s.`);
+      st(`${fait}/${JOB.charge.length} points chargés (communes et stations). Suite automatique dans ${mmss(PAUSE)}.`);
       attente(PAUSE,'avant le suivant',true); $('bGo').disabled=false;
     }else{
       st('Zonage radon…'); enCours('Radon');
