@@ -512,10 +512,18 @@ function recaler(com){
   });
   const rs=com.filter(c=>ok(c.ratS)).map(c=>c.ratS); if(rs.length) ratioS=mean(rs);
   if(!com.some(c=>c.k||c.snowMes)) return null;
-  // Postes à présenter : les plus proches du centre du territoire ayant une mesure de neige si possible
-  const ctr={lat:mean(com.map(c=>c.lat)),lon:mean(com.map(c=>c.lon))};
-  const liste=MF.map(p=>({...p,d:km(ctr,p)})).filter(p=>p.d<=20)
-    .sort((a,b)=>(ok(b.Sn)-ok(a.Sn))||a.d-b.d).slice(0,5).sort((a,b)=>a.alt-b.alt);
+  // Postes à présenter : pour CHAQUE commune, le poste le plus proche (≤ 20 km), de préférence avec une mesure
+  // de neige et à une altitude voisine ; une ligne par poste, avec les communes qu'il représente.
+  const P=new Map();
+  com.forEach(c=>{
+    const cand=MF.map(p=>({p,d:km(c,p)})).filter(x=>x.d<=20);
+    if(!cand.length) return;
+    const score=x=>x.d+Math.abs((x.p.alt||0)-(c.alt||0))/100+(ok(x.p.Sn)?0:15);   // 100 m de dénivelé ≈ 1 km
+    const best=cand.sort((u,v)=>score(u)-score(v))[0];
+    const e=P.get(best.p.id)||{...best.p,d:best.d,communes:[]};
+    e.d=Math.min(e.d,best.d); if(!e.communes.includes(c.nom)) e.communes.push(c.nom); P.set(best.p.id,e);
+  });
+  const liste=[...P.values()].sort((a,b)=>b.communes.length-a.communes.length).slice(0,8).sort((a,b)=>a.alt-b.alt);
   return {n:used.size, grad:com.some(c=>c.meth==='grad'), liste, nS:usedS.size, neigeMes:com.every(c=>c.snowMes), ratioS};
 }
 
@@ -634,8 +642,8 @@ function render(nom,com,cal){
     </div>
     ${cal?`<h2>Mesures des postes Météo-France proches</h2>
     <table>
-      <tr><th>Poste</th><th>Alt. (m)</th><th>Distance (km)</th><th>Pluie+neige /an normale (mm)</th><th>Neige fraîche /an normale (cm)</th><th>Neige fraîche /an ${R0}–${LAST} (cm)</th></tr>
-      ${cal.liste.map(p=>`<tr><td>${p.nom}</td><td>${f0(p.alt)}</td><td>${f0(p.d)}</td><td>${f0(p.Pn)}</td><td>${f0(p.Sn)}</td><td>${f0(p.Sr)}</td></tr>`).join('')}
+      <tr><th>Poste</th><th>Alt. (m)</th><th>Le plus proche de</th><th>Distance (km)</th><th>Pluie+neige /an normale (mm)</th><th>Neige fraîche /an normale (cm)</th><th>Neige fraîche /an ${R0}–${LAST} (cm)</th></tr>
+      ${cal.liste.map(p=>`<tr><td>${p.nom}</td><td>${f0(p.alt)}</td><td style="text-align:left;white-space:normal">${p.communes.slice(0,3).join(', ')}${p.communes.length>3?` +${p.communes.length-3}`:''}</td><td>${f0(p.d)}</td><td>${f0(p.Pn)}</td><td>${f0(p.Sn)}</td><td>${f0(p.Sr)}</td></tr>`).join('')}
     </table>`:''}
     <div class="note">
       ${cal&&cal.neigeMes
