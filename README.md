@@ -61,6 +61,20 @@ Même fonctionnement (choix de l'intercommunalité, liste modifiable, lots de 4,
 - Données : modèle CAMS Europe (Copernicus, maille ≈ 11 km) via Open-Meteo, trois dernières années complètes.
 - **Recalage sur les stations** : statistiques annuelles officielles par station (Agence européenne pour l'environnement, service `AQ_Statistics_WM`, réseau Atmo). Pour chaque station de fond à moins de 20 km, le rapport mesure / modèle (NO₂, PM10, PM2,5) est appliqué aux communes voisines, pleinement en fond de vallée puis de moins en moins jusqu'à 1 000 m au-dessus de la station. L'ozone n'est pas recalé. Les stations proches (fond et trafic) sont listées sur la fiche avec leurs mesures.
 
+## Données précalculées (packs par intercommunalité)
+
+Pour qu'une fiche s'affiche instantanément, sans téléchargement ni quota, les données d'une intercommunalité peuvent être publiées dans le dépôt sous forme de « pack » :
+
+```
+donnees/comcom-v4-2025/<code EPCI>.json          ← fiche climat
+donnees/comair-v2-2023-2025/<code EPCI>.json     ← fiche qualité de l'air
+```
+
+- La page lit le pack dès que l'intercommunalité est choisie ; les communes ajoutées à la main restent téléchargées en direct.
+- **📦 Exporter le pack** : enregistre le pack de l'intercommunalité affichée (une fois la fiche générée).
+- **🗂 Préparer tout le département** : charge chaque intercommunalité du département (73 par défaut), génère la fiche et enregistre son pack ; les packs déjà faits sont sautés, on peut donc relancer après un quota journalier.
+- Le nom du dossier contient la version des données : au changement d'année, les anciens packs sont ignorés et il faut les régénérer (mise à jour annuelle).
+
 ## Licence
 
 Tous droits réservés — voir [LICENSE](LICENSE). Les données restent soumises à leurs propres licences (Open-Meteo CC BY 4.0 ; Météo-France et geo.api.gouv.fr sous Licence Ouverte Etalab 2.0).
