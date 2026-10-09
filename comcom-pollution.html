@@ -267,6 +267,7 @@ async function chargerListe(){
     $('liste').classList.add('on'); afficherListe();
     await altitudes(LIST.filter(c=>!ok(c.alt))); afficherListe();
     st(LIST.length+' communes. Décochez celles à exclure, ajoutez-en si besoin, puis générez la fiche.');
+    if(!new URLSearchParams(location.search).get('ajouts')) setTimeout(demarrageAuto,300);
   }catch(e){st('Erreur : '+e.message);}
 }
 // Fiche communale (générateur mairies-pdf), ouverte toute prête grâce au lancement par URL
@@ -365,7 +366,7 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
     }
     if(q.get('titre')) $('titre').value=q.get('titre');
     $('liste').classList.add('on'); afficherListe();
-    st('Territoire repris de l\'autre fiche. Cliquez sur « Générer la fiche ».');
+    st('Territoire repris de l\'autre fiche.'); setTimeout(demarrageAuto,300);
   }catch(e){st('Territoire du lien introuvable : '+e.message);}
 })();
 
@@ -584,7 +585,7 @@ $('bStop').onclick=()=>{
   $('bGo').textContent='Reprendre le téléchargement';
   st(`Téléchargement arrêté (${fait}/${L.length} communes en cache). Cliquez sur « Reprendre » pour continuer.`);
 };
-$('bGo').onclick=async()=>{
+const lancer=async()=>{
   chronoStop(); STOP=false; $('bStop').style.display='';   // un clic pendant la pause relance aussitôt
   $('bGo').disabled=true; $('bPrint').disabled=true;
   const JOB={nom:$('titre').value.trim()||"Qualité de l'air", com:LIST.filter(c=>c.on)};
@@ -635,6 +636,16 @@ $('bGo').onclick=async()=>{
   }
   if(!TICK||['Chargement en cours','Radon'].includes($('chL').textContent)){chronoStop(); $('bGo').disabled=false;}
 };
+// Un seul téléchargement à la fois (clic, relance automatique ou démarrage dès l'affichage de la liste)
+let RUN=false;
+$('bGo').onclick=async()=>{ if(RUN) return; RUN=true; try{ await lancer(); } finally{ RUN=false; } };
+// Démarrage immédiat : dès que la liste des communes est affichée, le chargement commence sans attendre le clic
+function demarrageAuto(){
+  if(RUN||TICK||STOP) return;
+  if(!LIST.some(c=>c.on&&!c.Y)) return;
+  st('Chargement lancé automatiquement… (décochez les communes à exclure : elles seront ignorées dès le lot suivant)');
+  $('bGo').click();
+}
 
 // ---------- Graphiques ----------
 const MOIS=['J','F','M','A','M','J','J','A','S','O','N','D'];
