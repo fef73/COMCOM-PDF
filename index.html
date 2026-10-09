@@ -47,6 +47,10 @@
   #bSearch,#bGo,#aOk,.lock button{background:var(--live);color:#0b1622;border-color:var(--live);font-weight:600}
   .err{color:var(--danger);font-size:13px;min-height:1em}
   .panel{max-width:210mm;margin:0 auto 14px;background:var(--bg-panel);border:1px solid var(--hairline);padding:16px;border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .terr{width:100%;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+  .terr label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--live)}
+  .terr select{flex:1;min-width:240px}
+  .terr .ou{font-size:12px;color:var(--text-lo)}
   .panel .grow{flex:1;min-width:200px}
   #status{width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
   #liste{width:100%;display:none;border-top:1px solid var(--hairline);padding-top:12px}
@@ -102,6 +106,7 @@
   .note p{margin:2px 0}
   .foot{font-size:7.4pt;color:var(--mute);margin-top:10px;border-top:1px solid var(--line);padding-top:4px}
   .cachebar{max-width:210mm;margin:0 auto 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
+  .cachebar .sep{flex-basis:100%;height:0}
   .cachebar button{padding:6px 12px;font-size:12px}
   .pagefoot{max-width:210mm;margin:8px auto 28px;padding-top:16px;border-top:1px solid var(--hairline);text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
   .pagefoot .sig{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
@@ -141,6 +146,11 @@
 </header>
 
 <div class="panel">
+  <div class="terr">
+    <label for="dep73">Territoire de la Savoie</label>
+    <select id="dep73"><option value="">Choisir une intercommunalité de Savoie…</option></select>
+    <span class="ou">ou rechercher ailleurs :</span>
+  </div>
   <input class="grow" id="q" placeholder="Nom de la communauté de communes" value="Cœur de Maurienne Arvan">
   <button id="bSearch">Rechercher</button>
   <select id="epci" class="grow" style="display:none"></select>
@@ -168,6 +178,11 @@
   <button id="bSave">⬇ Enregistrer</button>
   <button id="bLoad">⬆ Restaurer</button>
   <button id="bClear">Vider le cache</button>
+  <span class="sep"></span>
+  <span id="packInfo">📦 Pas de données précalculées</span>
+  <button id="bPack" title="Enregistre toutes les données de l'intercommunalité affichée, à publier dans le dépôt">📦 Exporter le pack</button>
+  <input id="depPack" value="73" size="3" title="Département" style="padding:6px 8px;width:52px">
+  <button id="bDep" title="Charge chaque intercommunalité du département et enregistre son pack">🗂 Préparer tout le département</button>
   <span id="mfInfo">📡 Postes Météo-France : aucun</span>
   <button id="bMf">Charger postes-mf.json</button>
   <input type="file" id="fMf" accept=".json,application/json" style="display:none">
@@ -232,6 +247,25 @@ $('bSearch').onclick=async()=>{
   }catch(e){st('Erreur : '+e.message);}
 };
 $('q').onkeydown=e=>{if(e.key==='Enter')$('bSearch').click();};
+// ---------- Choix direct d'une intercommunalité de Savoie ----------
+const DEP_TERR='73';
+(async()=>{
+  try{
+    const l=await getJSON(`https://geo.api.gouv.fr/epcis?codeDepartement=${DEP_TERR}&fields=nom,code,population`);
+    const nomTri=n=>n.replace(/^(CC|CA|CU)\s+(du |de la |des |de l'|d'|de )?/i,'');
+    l.sort((a,b)=>nomTri(a.nom).localeCompare(nomTri(b.nom),'fr'));
+    $('dep73').innerHTML='<option value="">Choisir une intercommunalité de Savoie…</option>'+
+      l.map(e=>`<option value="${e.code}">${e.nom} · ${(e.population||0).toLocaleString('fr-FR')} hab.</option>`).join('');
+    const cur=new URLSearchParams(location.search).get('epci'); if(cur) $('dep73').value=cur;
+  }catch(e){ $('dep73').innerHTML='<option value="">Liste de la Savoie indisponible : utilisez la recherche</option>'; }
+})();
+$('dep73').onchange=async()=>{
+  const code=$('dep73').value; if(!code) return;
+  const nom=$('dep73').selectedOptions[0].text.replace(/ · .*$/,'');
+  $('epci').innerHTML=`<option value="${code}">${nom}</option>`; $('epci').value=code; $('epci').style.display='';
+  $('q').value=nom.replace(/^(CC|CA|CU)\s+/,'');
+  await chargerListe();
+};
 $('bPrint').onclick=()=>window.print();
 
 // ---------- Liste des communes modifiable ----------
@@ -258,6 +292,7 @@ async function chargerListe(){
   try{
     const l=await getJSON(`https://geo.api.gouv.fr/epcis/${code}/communes?fields=nom,code,centre,mairie,population`);
     LIST=l.filter(c=>c.centre).map(toCom).map(withCache).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+    PACKINFO=null; await appliquerPack(code); majPackInfo();
     $('titre').value=$('epci').selectedOptions[0].text;
     $('liste').classList.add('on'); afficherListe();
     await altitudes(LIST.filter(c=>!ok(c.alt))); afficherListe();
@@ -332,6 +367,64 @@ $('bAdd').onclick=async()=>{
 };
 $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
 $('titre').oninput=majNav;
+function clesPack(){return LIST.filter(c=>!c.ext).map(c=>[cleC(c),c]);}
+
+// ---------- Données précalculées (packs par intercommunalité) ----------
+// Un pack = toutes les données d'une intercommunalité, publié dans le dépôt : donnees/<version>/<code EPCI>.json
+// La page le lit en premier : la fiche s'affiche sans téléchargement ni quota.
+// Le dossier porte la version des données (CACHE) : un pack d'une ancienne version est simplement ignoré.
+let PACKINFO=null;
+async function appliquerPack(code){
+  try{
+    const r=await fetch(`donnees/${CACHE}/${code}.json`,{cache:'no-cache'}); if(!r.ok) return 0;
+    const j=await r.json(); let n=0;
+    Object.entries(j.items||{}).forEach(([k,v])=>{ PACK[k]=v; try{localStorage.setItem(CACHE+'-'+k,JSON.stringify(v));}catch(e){} n++; });
+    LIST.forEach(c=>{ if(!c.Y){const v=PACK[cleC(c)]; if(v){c.alt=v.alt; c.Y=v.Y;}} });
+    PACKINFO={n,date:j.genere,nom:j.nom}; majPackInfo(); return n;
+  }catch(e){return 0;}
+}
+function majPackInfo(){ $('packInfo').textContent=PACKINFO?`📦 Données précalculées du ${new Date(PACKINFO.date).toLocaleDateString('fr-FR')} (${PACKINFO.n} points)`:'📦 Pas de données précalculées pour ce territoire'; }
+// Export du pack de l'intercommunalité affichée (communes de l'EPCI, hors communes ajoutées)
+function exporterPack(){
+  const code=$('epci').value; if(!code){st('Choisissez d\'abord une intercommunalité.');return false;}
+  const items={}, manque=[];
+  clesPack().forEach(([k,c])=>{ const v=c.Y?{alt:c.alt,Y:c.Y}:cacheGet(k); if(v&&v.Y) items[k]=v; else manque.push(c.nom); });
+  if(manque.length){st(`Pack incomplet : ${manque.length} point(s) non chargé(s) (${manque.slice(0,3).join(', ')}…). Générez d'abord la fiche.`);return false;}
+  const pack={version:CACHE,genere:new Date().toISOString(),epci:code,nom:$('epci').selectedOptions[0].text,items};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(pack)],{type:'application/json'}));
+  a.download=`${code}.json`; a.click(); URL.revokeObjectURL(a.href);
+  try{localStorage.setItem('packfait-'+CACHE+'-'+code,'1');}catch(e){}
+  st(`Pack ${code}.json enregistré (${Object.keys(items).length} points). À déposer dans le dépôt : donnees/${CACHE}/`);
+  return true;
+}
+$('bPack').onclick=exporterPack;
+// Préparation de tout un département : chaque intercommunalité est chargée, la fiche générée, le pack enregistré
+$('bDep').onclick=async()=>{
+  const dep=($('depPack').value||'73').trim();
+  let l; try{ l=await getJSON(`https://geo.api.gouv.fr/epcis?codeDepartement=${encodeURIComponent(dep)}&fields=nom,code`); }catch(e){st('Département introuvable.');return;}
+  STOP=false; let faits=0;
+  for(const [i,e] of l.entries()){
+    if(STOP) break;
+    let deja=false; try{deja=!!localStorage.getItem('packfait-'+CACHE+'-'+e.code);}catch(err){}
+    if(!deja){ try{const r=await fetch(`donnees/${CACHE}/${e.code}.json`,{method:'HEAD',cache:'no-cache'}); deja=r.ok;}catch(err){} }
+    if(deja){faits++; continue;}
+    $('epci').innerHTML=`<option value="${e.code}">${e.nom}</option>`; $('epci').value=e.code; $('epci').style.display='';
+    const n0=FICHE_N;
+    await chargerListe();
+    st(`Département ${dep} : ${e.nom} (${i+1}/${l.length})…`);
+    await sleep(500); if(!RUN&&!TICK) $('bGo').click();
+    while(FICHE_N===n0&&!STOP){
+      await sleep(2000);
+      if(!RUN&&!TICK&&/^Pause/.test($('status').textContent)){STOP=true; break;}   // quota journalier : on s'arrête, on reprendra demain
+    }
+    if(STOP) break;
+    if(exporterPack()) faits++;
+    await sleep(1500);
+  }
+  st(`Département ${dep} : ${faits}/${l.length} packs prêts.${faits<l.length?' Relancez plus tard pour les suivants (ceux déjà faits sont sautés).':' Déposez les fichiers dans le dépôt : donnees/'+CACHE+'/'}`);
+};
+
 // ---------- Passage d'une fiche à l'autre avec le même territoire ----------
 // Lien : ?epci=CODE&titre=…&exclus=insee,insee&ajouts=insee@alt~nom|insee~nom
 function etatURL(){
@@ -374,7 +467,8 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
 // Précipitations : ERA5 (≈ 25 km), car Open-Meteo ne fournit pas les précipitations ERA5-Land.
 const VARS_T='temperature_2m_mean,temperature_2m_min,temperature_2m_max', VARS_P='precipitation_sum';
 const LOT=4, PAUSE=65, CACHE='comcom-v4-'+LAST;
-function cacheGet(insee){try{return JSON.parse(localStorage.getItem(CACHE+'-'+insee));}catch(e){return null;}}
+const PACK={};   // données des packs précalculés (si le stockage du navigateur est plein)
+function cacheGet(insee){try{const v=localStorage.getItem(CACHE+'-'+insee); if(v) return JSON.parse(v);}catch(e){} return PACK[insee]||null;}
 function cacheSet(insee,v){try{localStorage.setItem(CACHE+'-'+insee,JSON.stringify(v));}catch(e){} cacheInfo();}
 
 // ---------- Gestion du cache local (3 boutons) ----------
@@ -546,7 +640,7 @@ function recaler(com){
 
 // ---------- Génération par lots ----------
 // Téléchargement automatique : une commune, pause de PAUSE s, commune suivante… jusqu'à la fin ou l'arrêt
-let STOP=false;
+let STOP=false, FICHE_N=0;
 $('bStop').onclick=()=>{
   STOP=true; chronoStop(); $('bStop').style.display='none'; $('bGo').disabled=false;
   const L=LIST.filter(c=>c.on), fait=L.filter(c=>c.Y).length;
@@ -590,7 +684,7 @@ const lancer=async()=>{
       const cal=recaler(com);
       chronoStop(); $('bStop').style.display='none'; render(JOB.nom,com,cal);
       $('bGo').textContent='Générer la fiche';
-      $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
+      FICHE_N++; $('bPrint').disabled=false; st('Fiche prête. Cliquez sur « Imprimer / PDF » puis « Enregistrer au format PDF ».');
     }
   }catch(e){
     const fait=JOB.com.filter(c=>c.Y).length;
