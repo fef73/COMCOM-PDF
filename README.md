@@ -12,6 +12,13 @@ Site : https://fef73.github.io/COMCOM-PDF/ — accès protégé par mot de passe
 - Titre de la fiche libre (ex. « Vallée de l'Arvan » pour un Pack territoire).
 - Chaque commune est calculée au **chef-lieu** (position de la mairie), là où vivent les habitants, et non au centre géométrique du territoire communal.
 
+## Stations de ski
+
+- Quand l'intercommunalité choisie compte des stations de ski (Savoie), un encadré **⛷ Stations de ski du territoire** les propose sous la liste des communes.
+- On coche une station et on **saisit l'altitude** à laquelle la calculer. Les altitudes basse et haute des remontées mécaniques sont affichées en repère (un clic sur l'une d'elles la reprend).
+- Chaque station est ajoutée comme une commune supplémentaire (code INSEE de sa commune + altitude), exactement comme l'ajout manuel : elle passe aussi dans le lien vers la fiche qualité de l'air.
+- Données : `donnees/stations-ski-savoie.json` (40 stations, regroupées par SIREN d'intercommunalité dans `parEpci`), relevé d'octobre 2026 (skiinfo.fr, skiresort.com, geo.api.gouv.fr).
+
 ## Contenu de la fiche
 
 - En-tête : nombre de communes, habitants (une commune ajoutée plusieurs fois n'est comptée qu'une fois), plage d'altitude.

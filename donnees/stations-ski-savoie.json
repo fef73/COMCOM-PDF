@@ -1,0 +1,1983 @@
+{
+ "meta": {
+  "titre": "Stations de ski de Savoie – offices de tourisme et données station",
+  "departement": "73",
+  "dateReleve": "2026-10-10",
+  "cleLiaison": "codeInsee (code officiel géographique INSEE de la commune)",
+  "valeurNull": "null = donnée non communiquée (n.c.)",
+  "sources": [
+   "Savoie Mont Blanc (lits, via Wikipédia)",
+   "skiinfo.fr",
+   "skiresort.com",
+   "remontees-mecaniques.net",
+   "geo.api.gouv.fr",
+   "banatic.interieur.gouv.fr",
+   "guide-tourisme-france.com",
+   "Alti-Mag (journées-skieurs 2018-19)"
+  ],
+  "nbCommunes": 36,
+  "nbStations": 40,
+  "index": "index : nom normalisé (minuscules, sans accents, tirets et apostrophes → espaces, « saint » → « st ») → codeInsee ; couvre communes et stations",
+  "parEpci": "parEpci : SIREN de l'intercommunalité → stations (nom court, code INSEE, altitudes basse et haute des remontées) ; utilisé par COMCOM-PDF"
+ },
+ "communes": {
+  "73004": {
+   "codeInsee": "73004",
+   "commune": "Aillon-le-Jeune",
+   "epci": {
+    "nom": "CA Grand Chambéry",
+    "siren": "200069110"
+   },
+   "stations": [
+    {
+     "station": "Aillons-Margériaz",
+     "vallee": "Bauges / Chambéry",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "SEM des Bauges",
+     "kmPistesDomaine": 24,
+     "kmPistesStation": 24,
+     "remonteesMecaniques": 10,
+     "altitudeBasse": 1370,
+     "altitudeHaute": 1785,
+     "denivele": 415,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 3735,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "Chambéry Montagnes - Accueil des Aillons",
+      "adresse": "9 route de la Combe",
+      "codePostal": "73340",
+      "commune": "Aillon-le-Jeune",
+      "telephone": "04 79 54 63 65",
+      "email": "contact@semdesbauges.fr",
+      "siteWeb": "https://www.lesaillons.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "lits": "Commune d'Aillon-le-Jeune",
+      "office": "E-mail à vérifier"
+     }
+    }
+   ]
+  },
+  "73006": {
+   "codeInsee": "73006",
+   "commune": "Aime-la-Plagne",
+   "epci": {
+    "nom": "CC Les Versants d'Aime",
+    "siren": "247300817"
+   },
+   "stations": [
+    {
+     "station": "La Plagne Vallée (Aime)",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "SAP – Société d'Aménagement de La Plagne",
+     "kmPistesDomaine": 225,
+     "kmPistesStation": 225,
+     "remonteesMecaniques": 76,
+     "altitudeBasse": 1250,
+     "altitudeHaute": 3250,
+     "denivele": 2000,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans La Plagne",
+     "litsTouristiques": null,
+     "litsAnnee": null,
+     "officeTourisme": {
+      "nom": "OT La Plagne Vallée",
+      "adresse": "1139 avenue de Tarentaise",
+      "codePostal": "73210",
+      "commune": "Aime-la-Plagne",
+      "telephone": "04 79 55 67 00",
+      "email": "info.vallee@la-plagne.com",
+      "siteWeb": "https://www.la-plagne.com"
+     },
+     "notes": {
+      "km": "La Plagne (425 km Paradiski) ; station seule : secteur La Plagne",
+      "remontees": "skiinfo.fr; secteur La Plagne",
+      "altitudes": "skiinfo.fr; secteur La Plagne",
+      "lits": "Bureau de vallée, pas une station"
+     }
+    }
+   ]
+  },
+  "73013": {
+   "codeInsee": "73013",
+   "commune": "Albiez-Montrond",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "Albiez-Montrond",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "SSDS – Régie intéressée d'Albiez",
+     "kmPistesDomaine": 35,
+     "kmPistesStation": 35,
+     "remonteesMecaniques": 7,
+     "altitudeBasse": 1520,
+     "altitudeHaute": 2100,
+     "denivele": 580,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 5593,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Montagnicimes - Albiez",
+      "adresse": "16 place Opinel",
+      "codePostal": "73300",
+      "commune": "Albiez-Montrond",
+      "telephone": "04 79 59 30 48",
+      "email": "info@montagnicimes.com",
+      "siteWeb": "https://www.montagnicimes.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "E-mail Montagnicimes : à vérifier"
+     }
+    }
+   ]
+  },
+  "73015": {
+   "codeInsee": "73015",
+   "commune": "Les Allues",
+   "epci": {
+    "nom": "CC Val Vanoise",
+    "siren": "200040798"
+   },
+   "stations": [
+    {
+     "station": "Méribel",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "Méribel Alpina (Mottaret : S3V)",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 150,
+     "remonteesMecaniques": 43,
+     "altitudeBasse": 1100,
+     "altitudeHaute": 2952,
+     "denivele": 1852,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (Mottaret compté avec Courchevel)",
+     "litsTouristiques": 37973,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Méribel",
+      "adresse": "510 route Albert Gacon",
+      "codePostal": "73550",
+      "commune": "Les Allues",
+      "telephone": "04 79 08 60 01",
+      "email": "web@meribel.net",
+      "siteWeb": "https://www.meribel.net"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : vallée de Méribel",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73023": {
+   "codeInsee": "73023",
+   "commune": "Aussois",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "Aussois",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Société Parrachée Vanoise",
+     "kmPistesDomaine": 55,
+     "kmPistesStation": 55,
+     "remonteesMecaniques": 7,
+     "altitudeBasse": 1530,
+     "altitudeHaute": 2705,
+     "denivele": 1175,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 6491,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Haute Maurienne Vanoise - Aussois",
+      "adresse": "43 route des Barrages",
+      "codePostal": "73500",
+      "commune": "Aussois",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.aussois.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "Standard commun Haute Maurienne Vanoise"
+     }
+    }
+   ]
+  },
+  "73024": {
+   "codeInsee": "73024",
+   "commune": "Les Avanchers-Valmorel",
+   "epci": {
+    "nom": "CC des Vallées d'Aigueblanche",
+    "siren": "247300015"
+   },
+   "stations": [
+    {
+     "station": "Valmorel",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Le Grand Domaine",
+     "exploitantRM": "Domaine Skiable de Valmorel",
+     "kmPistesDomaine": 165,
+     "kmPistesStation": 95,
+     "remonteesMecaniques": 46,
+     "altitudeBasse": 1350,
+     "altitudeHaute": 2550,
+     "denivele": 1200,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 14313,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "Accueil Valmorel",
+      "adresse": "25 Bourg Morel",
+      "codePostal": "73260",
+      "commune": "Les Avanchers-Valmorel",
+      "telephone": "04 79 09 85 55",
+      "email": "info@valmorel.com",
+      "siteWeb": "https://www.valmorel.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Grand Domaine)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73034": {
+   "codeInsee": "73034",
+   "commune": "Beaufort",
+   "epci": {
+    "nom": "CA Arlysère",
+    "siren": "200068997"
+   },
+   "stations": [
+    {
+     "station": "Arêches-Beaufort",
+     "vallee": "Beaufortain / Val d'Arly",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "SEMAB – Domaine skiable d'Arêches-Beaufort",
+     "kmPistesDomaine": 50,
+     "kmPistesStation": 50,
+     "remonteesMecaniques": 14,
+     "altitudeBasse": 1080,
+     "altitudeHaute": 2300,
+     "denivele": 1220,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 9350,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT d'Arêches-Beaufort",
+      "adresse": "2 Grande Rue",
+      "codePostal": "73270",
+      "commune": "Beaufort",
+      "telephone": "04 79 38 37 57",
+      "email": "otbeaufort@areches-beaufort.com",
+      "siteWeb": "https://www.areches-beaufort.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "Bureau d'Arêches : info@areches-beaufort.com"
+     }
+    }
+   ]
+  },
+  "73040": {
+   "codeInsee": "73040",
+   "commune": "Bessans",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "Bessans",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant (ski nordique)",
+     "exploitantRM": "n.c. (station surtout nordique)",
+     "kmPistesDomaine": null,
+     "kmPistesStation": null,
+     "remonteesMecaniques": 2,
+     "altitudeBasse": 1706,
+     "altitudeHaute": 1842,
+     "denivele": 136,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 3953,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Haute Maurienne Vanoise - Bessans",
+      "adresse": "Rue Maison Morte",
+      "codePostal": "73480",
+      "commune": "Bessans",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.bessans.com"
+     },
+     "notes": {
+      "km": "Station ; ~130 km de ski de fond",
+      "remontees": "remontees-mecaniques.net; 2 téléskis (station nordique)",
+      "altitudes": "skiresort.com; ski alpin limité (station nordique)",
+      "office": "Standard commun Haute Maurienne Vanoise"
+     }
+    }
+   ]
+  },
+  "73047": {
+   "codeInsee": "73047",
+   "commune": "Bonneval-sur-Arc",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "Bonneval-sur-Arc",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Remontées mécaniques de Bonneval-sur-Arc",
+     "kmPistesDomaine": 32,
+     "kmPistesStation": 32,
+     "remonteesMecaniques": 10,
+     "altitudeBasse": 1797,
+     "altitudeHaute": 2947,
+     "denivele": 1150,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 2353,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Haute Maurienne Vanoise - Bonneval",
+      "adresse": "5 route de l'Iseran",
+      "codePostal": "73480",
+      "commune": "Bonneval-sur-Arc",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.bonneval-sur-arc.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "Standard commun Haute Maurienne Vanoise"
+     }
+    }
+   ]
+  },
+  "73054": {
+   "codeInsee": "73054",
+   "commune": "Bourg-Saint-Maurice",
+   "epci": {
+    "nom": "CC de Haute-Tarentaise",
+    "siren": "247300254"
+   },
+   "stations": [
+    {
+     "station": "Les Arcs / Bourg-Saint-Maurice",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "ADS – Arcs Domaine Skiable",
+     "kmPistesDomaine": 200,
+     "kmPistesStation": 200,
+     "remonteesMecaniques": 54,
+     "altitudeBasse": 1200,
+     "altitudeHaute": 3226,
+     "denivele": 2026,
+     "journeesSkieurs": 2283173,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag) ; Les Arcs + Peisey-Vallandry",
+     "litsTouristiques": 41505,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Les Arcs Bourg-Saint-Maurice",
+      "adresse": "105 place de la Gare",
+      "codePostal": "73700",
+      "commune": "Bourg-Saint-Maurice",
+      "telephone": "04 79 07 12 57",
+      "email": "lesarcs@lesarcs.com",
+      "siteWeb": "https://www.lesarcs.com"
+     },
+     "notes": {
+      "km": "Les Arcs/Peisey (425 km Paradiski) ; station seule : secteur Les Arcs + Peisey",
+      "remontees": "skiinfo.fr; secteur Les Arcs + Peisey",
+      "altitudes": "skiresort.com; Les Arcs + Peisey",
+      "lits": "Ensemble des Arcs",
+      "office": "Bureaux dans chaque Arc"
+     }
+    }
+   ]
+  },
+  "73057": {
+   "codeInsee": "73057",
+   "commune": "Brides-les-Bains",
+   "epci": {
+    "nom": "CC Val Vanoise",
+    "siren": "200040798"
+   },
+   "stations": [
+    {
+     "station": "Brides-les-Bains",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées (télécabine vers Méribel)",
+     "exploitantRM": "Méribel Alpina (télécabine de l'Olympe)",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": null,
+     "remonteesMecaniques": null,
+     "altitudeBasse": null,
+     "altitudeHaute": null,
+     "denivele": null,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 6488,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Brides-les-Bains",
+      "adresse": "2 place du Centenaire, BP 28",
+      "codePostal": "73570",
+      "commune": "Brides-les-Bains",
+      "telephone": "04 79 55 20 64",
+      "email": "contact@brides-les-bains.com",
+      "siteWeb": "https://www.brides-les-bains.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : pas de domaine propre (accès à Méribel)",
+      "remontees": "télécabine de l'Olympe vers Méribel",
+      "altitudes": "pas de domaine propre (télécabine vers Méribel)"
+     }
+    }
+   ]
+  },
+  "73071": {
+   "codeInsee": "73071",
+   "commune": "Champagny-en-Vanoise",
+   "epci": {
+    "nom": "CC Val Vanoise",
+    "siren": "200040798"
+   },
+   "stations": [
+    {
+     "station": "Champagny-en-Vanoise",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "SAP – Société d'Aménagement de La Plagne",
+     "kmPistesDomaine": 225,
+     "kmPistesStation": 225,
+     "remonteesMecaniques": 76,
+     "altitudeBasse": 1250,
+     "altitudeHaute": 3000,
+     "denivele": 1750,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans La Plagne",
+     "litsTouristiques": 5792,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT La Plagne - Champagny",
+      "adresse": "7 place du Centre",
+      "codePostal": "73350",
+      "commune": "Champagny-en-Vanoise",
+      "telephone": "04 79 55 06 55",
+      "email": "info.champagny@la-plagne.com",
+      "siteWeb": "https://www.la-plagne.com"
+     },
+     "notes": {
+      "km": "La Plagne (425 km Paradiski) ; station seule : secteur La Plagne",
+      "remontees": "skiinfo.fr; secteur La Plagne",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73094": {
+   "codeInsee": "73094",
+   "commune": "Crest-Voland",
+   "epci": {
+    "nom": "CA Arlysère",
+    "siren": "200068997"
+   },
+   "stations": [
+    {
+     "station": "Crest-Voland / Cohennoz",
+     "vallee": "Beaufortain / Val d'Arly",
+     "domaineSkiable": "Espace Diamant",
+     "exploitantRM": "SPL Domaine skiable Crest-Voland Cohennoz",
+     "kmPistesDomaine": 192,
+     "kmPistesStation": null,
+     "remonteesMecaniques": null,
+     "altitudeBasse": 1230,
+     "altitudeHaute": 2069,
+     "denivele": 839,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 7681,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Val d'Arly - Crest-Voland",
+      "adresse": "81 place du Bouloz",
+      "codePostal": "73590",
+      "commune": "Crest-Voland",
+      "telephone": "04 79 31 62 57",
+      "email": "info@valdarly-montblanc.com",
+      "siteWeb": "https://www.crestvoland-cohennoz.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Espace Diamant) ; station seule : pas de chiffre séparé",
+      "remontees": "pas de chiffre séparé (80 pour l'Espace Diamant)",
+      "altitudes": "skiinfo.fr; haut = Espace Diamant"
+     }
+    }
+   ]
+  },
+  "73098": {
+   "codeInsee": "73098",
+   "commune": "Les Déserts",
+   "epci": {
+    "nom": "CA Grand Chambéry",
+    "siren": "200069110"
+   },
+   "stations": [
+    {
+     "station": "La Féclaz / Le Revard",
+     "vallee": "Bauges / Chambéry",
+     "domaineSkiable": "Indépendant (Savoie Grand Revard, nordique et alpin)",
+     "exploitantRM": "Régie des domaines skiables de Savoie Grand Revard",
+     "kmPistesDomaine": 32,
+     "kmPistesStation": 32,
+     "remonteesMecaniques": 5,
+     "altitudeBasse": 1326,
+     "altitudeHaute": 1525,
+     "denivele": 199,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 3419,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Savoie Grand Revard",
+      "adresse": "Centre station",
+      "codePostal": "73230",
+      "commune": "Les Déserts",
+      "telephone": "04 79 25 80 49",
+      "email": "accueil.savoiegrandrevard@grandchamberyalpes-tourisme.com",
+      "siteWeb": "https://www.chamberymontagnes.com"
+     },
+     "notes": {
+      "km": "Station ; + grand domaine nordique",
+      "remontees": "skiresort.com; La Féclaz",
+      "altitudes": "skiresort.com; La Féclaz",
+      "lits": "La Féclaz seule",
+      "office": "Rattaché à Chambéry Montagnes"
+     }
+    }
+   ]
+  },
+  "73116": {
+   "codeInsee": "73116",
+   "commune": "Fontcouverte-la-Toussuire",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "La Toussuire",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Les Sybelles",
+     "exploitantRM": "SOREMET",
+     "kmPistesDomaine": 275,
+     "kmPistesStation": 55,
+     "remonteesMecaniques": 21,
+     "altitudeBasse": 1800,
+     "altitudeHaute": 2400,
+     "denivele": 600,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 13239,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de La Toussuire",
+      "adresse": "Place Olympique",
+      "codePostal": "73300",
+      "commune": "Fontcouverte-la-Toussuire",
+      "telephone": "04 79 83 06 06",
+      "email": "info@la-toussuire.com",
+      "siteWeb": "https://www.la-toussuire.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Sybelles)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73132": {
+   "codeInsee": "73132",
+   "commune": "Hauteluce",
+   "epci": {
+    "nom": "CA Arlysère",
+    "siren": "200068997"
+   },
+   "stations": [
+    {
+     "station": "Les Saisies",
+     "vallee": "Beaufortain / Val d'Arly",
+     "domaineSkiable": "Espace Diamant",
+     "exploitantRM": "Régie des Saisies",
+     "kmPistesDomaine": 192,
+     "kmPistesStation": 77,
+     "remonteesMecaniques": 31,
+     "altitudeBasse": 1150,
+     "altitudeHaute": 2069,
+     "denivele": 919,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 15253,
+     "litsAnnee": "2016",
+     "officeTourisme": {
+      "nom": "OT des Saisies",
+      "adresse": null,
+      "codePostal": "73620",
+      "commune": "Hauteluce",
+      "telephone": "04 79 38 90 30",
+      "email": "info@lessaisies.com",
+      "siteWeb": "https://www.lessaisies.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Espace Diamant)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr",
+      "office": "Adresse à compléter"
+     }
+    }
+   ]
+  },
+  "73150": {
+   "codeInsee": "73150",
+   "commune": "La Plagne Tarentaise",
+   "epci": {
+    "nom": "CC Les Versants d'Aime",
+    "siren": "247300817"
+   },
+   "stations": [
+    {
+     "station": "La Plagne (altitude)",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "SAP – Société d'Aménagement de La Plagne",
+     "kmPistesDomaine": 225,
+     "kmPistesStation": 225,
+     "remonteesMecaniques": 76,
+     "altitudeBasse": 1250,
+     "altitudeHaute": 3250,
+     "denivele": 2000,
+     "journeesSkieurs": 2504147,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag) ; domaine La Plagne entier",
+     "litsTouristiques": 43725,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT La Plagne - Maison du Tourisme",
+      "adresse": "Plagne Centre",
+      "codePostal": "73210",
+      "commune": "La Plagne Tarentaise",
+      "telephone": "04 79 09 02 01",
+      "email": "info@la-plagne.com",
+      "siteWeb": "https://www.la-plagne.com"
+     },
+     "notes": {
+      "km": "La Plagne (425 km Paradiski) ; station seule : secteur La Plagne",
+      "remontees": "skiinfo.fr; secteur La Plagne",
+      "altitudes": "skiinfo.fr; secteur La Plagne",
+      "lits": "Villages d'altitude ; 66 322 pour toute La Plagne",
+      "office": "Bureaux dans chaque village de La Plagne"
+     }
+    },
+    {
+     "station": "Montchavin-Les Coches",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "SAP – Société d'Aménagement de La Plagne",
+     "kmPistesDomaine": 225,
+     "kmPistesStation": 225,
+     "remonteesMecaniques": 76,
+     "altitudeBasse": 1250,
+     "altitudeHaute": 3250,
+     "denivele": 2000,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans La Plagne",
+     "litsTouristiques": 12359,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT La Plagne - Montchavin-Les Coches",
+      "adresse": "Maison de Montchavin",
+      "codePostal": "73210",
+      "commune": "La Plagne Tarentaise",
+      "telephone": "04 79 07 82 82",
+      "email": "info.montchavin@la-plagne.com",
+      "siteWeb": "https://www.la-plagne.com"
+     },
+     "notes": {
+      "km": "La Plagne (425 km Paradiski) ; station seule : secteur La Plagne",
+      "remontees": "skiinfo.fr; secteur La Plagne",
+      "altitudes": "skiinfo.fr; secteur La Plagne"
+     }
+    }
+   ]
+  },
+  "73157": {
+   "codeInsee": "73157",
+   "commune": "Modane",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "Valfréjus",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Régie des remontées mécaniques de Valfréjus",
+     "kmPistesDomaine": 70,
+     "kmPistesStation": 70,
+     "remonteesMecaniques": 9,
+     "altitudeBasse": 1550,
+     "altitudeHaute": 2737,
+     "denivele": 1187,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 6013,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Valfréjus / Modane",
+      "adresse": "Mairie de Modane",
+      "codePostal": "73500",
+      "commune": "Modane",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.valfrejus.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "Rattaché à Haute Maurienne Vanoise (standard commun)"
+     }
+    }
+   ]
+  },
+  "73173": {
+   "codeInsee": "73173",
+   "commune": "Montricher-Albanne",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "Les Karellis",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Régie des remontées mécaniques des Karellis",
+     "kmPistesDomaine": 60,
+     "kmPistesStation": 60,
+     "remonteesMecaniques": 17,
+     "altitudeBasse": 1550,
+     "altitudeHaute": 2482,
+     "denivele": 932,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 4099,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT des Karellis",
+      "adresse": "Le Forum",
+      "codePostal": "73870",
+      "commune": "Montricher-Albanne",
+      "telephone": "04 79 59 50 36",
+      "email": "info@karellis.com",
+      "siteWeb": "https://www.karellis.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com"
+     }
+    }
+   ]
+  },
+  "73176": {
+   "codeInsee": "73176",
+   "commune": "Montvalezan",
+   "epci": {
+    "nom": "CC de Haute-Tarentaise",
+    "siren": "247300254"
+   },
+   "stations": [
+    {
+     "station": "La Rosière",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Espace San Bernardo (avec La Thuile, Italie)",
+     "exploitantRM": "SAS Domaine Skiable de La Rosière (DSR)",
+     "kmPistesDomaine": 143,
+     "kmPistesStation": null,
+     "remonteesMecaniques": 38,
+     "altitudeBasse": 1850,
+     "altitudeHaute": 2800,
+     "denivele": 950,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 10546,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Montvalezan - La Rosière",
+      "adresse": "La Rosière",
+      "codePostal": "73700",
+      "commune": "Montvalezan",
+      "telephone": "04 79 06 80 51",
+      "email": "info@larosiere.net",
+      "siteWeb": "https://www.larosiere.net"
+     },
+     "notes": {
+      "km": "Domaine relié (avec La Thuile) ; station seule : pas de chiffre côté français seul",
+      "remontees": "skiinfo.fr; Espace San Bernardo entier (avec La Thuile)",
+      "altitudes": "skiinfo.fr; côté La Rosière",
+      "lits": "~12 000 en 2020 selon une autre source"
+     }
+    }
+   ]
+  },
+  "73186": {
+   "codeInsee": "73186",
+   "commune": "Notre-Dame-de-Bellecombe",
+   "epci": {
+    "nom": "CA Arlysère",
+    "siren": "200068997"
+   },
+   "stations": [
+    {
+     "station": "Notre-Dame-de-Bellecombe",
+     "vallee": "Beaufortain / Val d'Arly",
+     "domaineSkiable": "Espace Diamant",
+     "exploitantRM": "Remontées mécaniques Val d'Arly Labellemontagne",
+     "kmPistesDomaine": 192,
+     "kmPistesStation": null,
+     "remonteesMecaniques": null,
+     "altitudeBasse": 1150,
+     "altitudeHaute": 2069,
+     "denivele": 919,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 7555,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT Val d'Arly - ND-de-Bellecombe",
+      "adresse": "167 rue de Savoie",
+      "codePostal": "73590",
+      "commune": "Notre-Dame-de-Bellecombe",
+      "telephone": "04 79 31 61 40",
+      "email": "info@valdarly-montblanc.com",
+      "siteWeb": "https://www.valdarly-montblanc.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Espace Diamant) ; station seule : pas de chiffre séparé",
+      "remontees": "pas de chiffre séparé (80 pour l'Espace Diamant)",
+      "altitudes": "skiinfo.fr; Espace Diamant (chiffre commun)"
+     }
+    }
+   ]
+  },
+  "73197": {
+   "codeInsee": "73197",
+   "commune": "Peisey-Nancroix",
+   "epci": {
+    "nom": "CC Les Versants d'Aime",
+    "siren": "247300817"
+   },
+   "stations": [
+    {
+     "station": "Peisey-Vallandry",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Paradiski",
+     "exploitantRM": "ADS – Arcs Domaine Skiable",
+     "kmPistesDomaine": 200,
+     "kmPistesStation": 200,
+     "remonteesMecaniques": 54,
+     "altitudeBasse": 1650,
+     "altitudeHaute": 3250,
+     "denivele": 1600,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans Les Arcs",
+     "litsTouristiques": 12415,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Peisey-Vallandry",
+      "adresse": "6 route des Michailles, Vallandry",
+      "codePostal": "73210",
+      "commune": "Peisey-Nancroix",
+      "telephone": "04 79 07 94 28",
+      "email": "info@peisey-vallandry.com",
+      "siteWeb": "https://www.peisey-vallandry.com"
+     },
+     "notes": {
+      "km": "Les Arcs/Peisey (425 km Paradiski) ; station seule : secteur Les Arcs + Peisey",
+      "remontees": "skiinfo.fr; secteur Les Arcs + Peisey",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73206": {
+   "codeInsee": "73206",
+   "commune": "Pralognan-la-Vanoise",
+   "epci": {
+    "nom": "CC Val Vanoise",
+    "siren": "200040798"
+   },
+   "stations": [
+    {
+     "station": "Pralognan-la-Vanoise",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Compagnie des Alpes (DSP depuis le 01/11/2025)",
+     "kmPistesDomaine": 26,
+     "kmPistesStation": 26,
+     "remonteesMecaniques": 12,
+     "altitudeBasse": 1410,
+     "altitudeHaute": 2355,
+     "denivele": 945,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 9622,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Pralognan-la-Vanoise",
+      "adresse": "290 avenue Chasseforêt",
+      "codePostal": "73710",
+      "commune": "Pralognan-la-Vanoise",
+      "telephone": "04 79 08 79 08",
+      "email": "info@pralognan.com",
+      "siteWeb": "https://www.pralognan.com"
+     },
+     "notes": {
+      "km": "Station ; + 27 km de fond",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com"
+     }
+    }
+   ]
+  },
+  "73227": {
+   "codeInsee": "73227",
+   "commune": "Courchevel",
+   "epci": {
+    "nom": "CC Val Vanoise",
+    "siren": "200040798"
+   },
+   "stations": [
+    {
+     "station": "Courchevel",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "S3V – Société des 3 Vallées",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 150,
+     "remonteesMecaniques": 55,
+     "altitudeBasse": 1100,
+     "altitudeHaute": 2738,
+     "denivele": 1638,
+     "journeesSkieurs": 1534061,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag) ; Courchevel + La Tania + Méribel-Mottaret (S3V)",
+     "litsTouristiques": 32883,
+     "litsAnnee": "2016",
+     "officeTourisme": {
+      "nom": "Courchevel Tourisme",
+      "adresse": "9 rue de l'Église",
+      "codePostal": "73120",
+      "commune": "Courchevel",
+      "telephone": "04 79 08 00 29",
+      "email": "info@courchevel.com",
+      "siteWeb": "https://www.courchevel.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : secteur Courchevel, avec La Tania",
+      "remontees": "skiinfo.fr; secteur Courchevel, avec La Tania",
+      "altitudes": "skiinfo.fr",
+      "office": "Bureaux 1850, Moriond, Village, Le Praz"
+     }
+    },
+    {
+     "station": "La Tania",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "S3V – Société des 3 Vallées",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 150,
+     "remonteesMecaniques": 55,
+     "altitudeBasse": 1350,
+     "altitudeHaute": 2732,
+     "denivele": 1382,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans Courchevel",
+     "litsTouristiques": 3834,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de La Tania",
+      "adresse": "Centre station, bât. Les Folyères",
+      "codePostal": "73125",
+      "commune": "Courchevel",
+      "telephone": "04 79 08 40 40",
+      "email": "info@courchevel.com",
+      "siteWeb": "https://www.latania.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : secteur Courchevel, avec La Tania",
+      "remontees": "skiinfo.fr; secteur Courchevel, avec La Tania",
+      "altitudes": "skiinfo.fr",
+      "office": "Rattaché à Courchevel Tourisme"
+     }
+    }
+   ]
+  },
+  "73232": {
+   "codeInsee": "73232",
+   "commune": "Sainte-Foy-Tarentaise",
+   "epci": {
+    "nom": "CC de Haute-Tarentaise",
+    "siren": "247300254"
+   },
+   "stations": [
+    {
+     "station": "Sainte-Foy-Tarentaise",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "Régie des remontées mécaniques de Sainte-Foy",
+     "kmPistesDomaine": 43,
+     "kmPistesStation": 43,
+     "remonteesMecaniques": 6,
+     "altitudeBasse": 1550,
+     "altitudeHaute": 2620,
+     "denivele": 1070,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 5688,
+     "litsAnnee": "2016",
+     "officeTourisme": {
+      "nom": "OT de Sainte-Foy-Tarentaise",
+      "adresse": "Place de la Chapelle",
+      "codePostal": "73640",
+      "commune": "Sainte-Foy-Tarentaise",
+      "telephone": "04 79 06 95 19",
+      "email": "info@saintefoy.net",
+      "siteWeb": "https://www.saintefoy-tarentaise.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com"
+     }
+    }
+   ]
+  },
+  "73235": {
+   "codeInsee": "73235",
+   "commune": "Saint-François-Longchamp",
+   "epci": {
+    "nom": "CC Terres de Maurienne (ex-Canton de La Chambre)",
+    "siren": "247300361"
+   },
+   "stations": [
+    {
+     "station": "Saint-François-Longchamp",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Le Grand Domaine",
+     "exploitantRM": "Remontées mécaniques Saint-François Labellemontagne",
+     "kmPistesDomaine": 165,
+     "kmPistesStation": 70,
+     "remonteesMecaniques": 15,
+     "altitudeBasse": 1450,
+     "altitudeHaute": 2550,
+     "denivele": 1100,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 9000,
+     "litsAnnee": null,
+     "officeTourisme": {
+      "nom": "OT de Saint-François-Longchamp",
+      "adresse": "Maison du Tourisme, 291 route de Pré Villot",
+      "codePostal": "73130",
+      "commune": "Saint-François-Longchamp",
+      "telephone": "04 79 59 10 56",
+      "email": "info@otsfl.com",
+      "siteWeb": "https://www.saintfrancoislongchamp.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Grand Domaine)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr",
+      "lits": "Approximatif"
+     }
+    }
+   ]
+  },
+  "73242": {
+   "codeInsee": "73242",
+   "commune": "Saint-Jean-d'Arves",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "Saint-Jean-d'Arves",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Les Sybelles",
+     "exploitantRM": "SATVAC",
+     "kmPistesDomaine": 275,
+     "kmPistesStation": null,
+     "remonteesMecaniques": 21,
+     "altitudeBasse": 1100,
+     "altitudeHaute": 2620,
+     "denivele": 1520,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 4770,
+     "litsAnnee": "2019",
+     "officeTourisme": {
+      "nom": "OT de Saint-Jean-d'Arves",
+      "adresse": "476 route de La Chal",
+      "codePostal": "73530",
+      "commune": "Saint-Jean-d'Arves",
+      "telephone": "04 79 59 73 30",
+      "email": "info@sja73.com",
+      "siteWeb": "https://www.sja73.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Sybelles) ; station seule : pas de chiffre séparé",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr; à vérifier : semble couvrir les Sybelles"
+     }
+    }
+   ]
+  },
+  "73257": {
+   "codeInsee": "73257",
+   "commune": "Les Belleville",
+   "epci": {
+    "nom": "CC Cœur de Tarentaise",
+    "siren": "200023299"
+   },
+   "stations": [
+    {
+     "station": "Les Menuires",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "SEVABEL",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 160,
+     "remonteesMecaniques": 31,
+     "altitudeBasse": 1450,
+     "altitudeHaute": 2850,
+     "denivele": 1400,
+     "journeesSkieurs": 1492193,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag) ; avec Saint-Martin-de-Belleville",
+     "litsTouristiques": 30308,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT des Menuires",
+      "adresse": "1269 avenue de la Croisette",
+      "codePostal": "73440",
+      "commune": "Les Belleville",
+      "telephone": "04 79 00 73 00",
+      "email": "lesmenuires@lesmenuires.com",
+      "siteWeb": "https://www.lesmenuires.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : vallée des Belleville, avec Saint-Martin",
+      "remontees": "skiinfo.fr; avec Saint-Martin",
+      "altitudes": "skiinfo.fr; avec Saint-Martin",
+      "lits": "Inclut Saint-Martin-de-Belleville"
+     }
+    },
+    {
+     "station": "Saint-Martin-de-Belleville",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "SEVABEL",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 160,
+     "remonteesMecaniques": 31,
+     "altitudeBasse": 1450,
+     "altitudeHaute": 2850,
+     "denivele": 1400,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "Inclus dans Les Menuires",
+     "litsTouristiques": null,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "Maison du Tourisme",
+      "adresse": "54 rue du Clocher",
+      "codePostal": "73440",
+      "commune": "Les Belleville",
+      "telephone": "04 79 00 20 00",
+      "email": "stmartin@st-martin-belleville.com",
+      "siteWeb": "https://www.st-martin-belleville.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées) ; station seule : vallée des Belleville, avec Les Menuires",
+      "remontees": "skiinfo.fr; avec Les Menuires",
+      "altitudes": "skiinfo.fr; secteur Belleville, avec Les Menuires",
+      "lits": "Compté avec Les Menuires"
+     }
+    },
+    {
+     "station": "Val Thorens",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Les 3 Vallées",
+     "exploitantRM": "SETAM",
+     "kmPistesDomaine": 600,
+     "kmPistesStation": 150,
+     "remonteesMecaniques": 31,
+     "altitudeBasse": 1825,
+     "altitudeHaute": 3230,
+     "denivele": 1405,
+     "journeesSkieurs": 1872303,
+     "journeesSkieursNote": "2022-23 (dossier de presse Val Thorens) ; avec Orelle",
+     "litsTouristiques": 31223,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Val Thorens",
+      "adresse": "Maison de Val Thorens, 818 Grande Rue",
+      "codePostal": "73440",
+      "commune": "Les Belleville",
+      "telephone": "04 79 00 08 08",
+      "email": "valtho@valthorens.com",
+      "siteWeb": "https://www.valthorens.com"
+     },
+     "notes": {
+      "km": "Domaine relié (3 Vallées)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73280": {
+   "codeInsee": "73280",
+   "commune": "Saint-Sorlin-d'Arves",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "Saint-Sorlin-d'Arves",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Les Sybelles",
+     "exploitantRM": "SAMSO",
+     "kmPistesDomaine": 275,
+     "kmPistesStation": 120,
+     "remonteesMecaniques": 18,
+     "altitudeBasse": 1500,
+     "altitudeHaute": 2620,
+     "denivele": 1120,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 8405,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Saint-Sorlin-d'Arves",
+      "adresse": "2457 route du Col de la Croix de Fer",
+      "codePostal": "73530",
+      "commune": "Saint-Sorlin-d'Arves",
+      "telephone": "04 79 59 71 77",
+      "email": "info@saintsorlindarves.com",
+      "siteWeb": "https://www.saintsorlindarves.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Sybelles)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73290": {
+   "codeInsee": "73290",
+   "commune": "Val-Cenis",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "Val Cenis",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "SEM de Val Cenis (à vérifier)",
+     "kmPistesDomaine": 125,
+     "kmPistesStation": 125,
+     "remonteesMecaniques": 28,
+     "altitudeBasse": 1300,
+     "altitudeHaute": 2800,
+     "denivele": 1500,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 15000,
+     "litsAnnee": null,
+     "officeTourisme": {
+      "nom": "OT Haute Maurienne Vanoise (siège)",
+      "adresse": "6 rue Napoléon, Lanslebourg",
+      "codePostal": "73480",
+      "commune": "Val-Cenis",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.valcenis.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "lits": "Approximatif (3 villages)",
+      "office": "Siège Haute Maurienne Vanoise"
+     }
+    }
+   ]
+  },
+  "73296": {
+   "codeInsee": "73296",
+   "commune": "Tignes",
+   "epci": {
+    "nom": "CC de Haute-Tarentaise",
+    "siren": "247300254"
+   },
+   "stations": [
+    {
+     "station": "Tignes",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Tignes – Val d'Isère (ex-Espace Killy)",
+     "exploitantRM": "SPL ALTTA (depuis le 01/06/2026, ex-STGM)",
+     "kmPistesDomaine": 300,
+     "kmPistesStation": 150,
+     "remonteesMecaniques": 43,
+     "altitudeBasse": 1550,
+     "altitudeHaute": 3450,
+     "denivele": 1900,
+     "journeesSkieurs": 1559871,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag)",
+     "litsTouristiques": 32105,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "Tignes Information",
+      "adresse": "Maison de Tignes Le Lac (BP 51)",
+      "codePostal": "73320",
+      "commune": "Tignes",
+      "telephone": "04 79 40 04 40",
+      "email": "information@tignes.net",
+      "siteWeb": "https://www.tignes.net"
+     },
+     "notes": {
+      "km": "Domaine relié",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr",
+      "office": "Bureau aussi au Val Claret"
+     }
+    }
+   ]
+  },
+  "73304": {
+   "codeInsee": "73304",
+   "commune": "Val-d'Isère",
+   "epci": {
+    "nom": "CC de Haute-Tarentaise",
+    "siren": "247300254"
+   },
+   "stations": [
+    {
+     "station": "Val d'Isère",
+     "vallee": "Tarentaise",
+     "domaineSkiable": "Tignes – Val d'Isère (ex-Espace Killy)",
+     "exploitantRM": "STVI – Société des Téléphériques de Val d'Isère",
+     "kmPistesDomaine": 300,
+     "kmPistesStation": 152,
+     "remonteesMecaniques": 37,
+     "altitudeBasse": 1850,
+     "altitudeHaute": 3456,
+     "denivele": 1606,
+     "journeesSkieurs": 1386186,
+     "journeesSkieursNote": "2018-19 (classement Alti-Mag)",
+     "litsTouristiques": 33369,
+     "litsAnnee": "2019",
+     "officeTourisme": {
+      "nom": "Office de tourisme de Val d'Isère",
+      "adresse": "Place Jacques Mouflier, BP 228",
+      "codePostal": "73150",
+      "commune": "Val-d'Isère",
+      "telephone": "04 79 06 06 60",
+      "email": "info@valdisere.com",
+      "siteWeb": "https://www.valdisere.com"
+     },
+     "notes": {
+      "km": "Domaine relié",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr"
+     }
+    }
+   ]
+  },
+  "73306": {
+   "codeInsee": "73306",
+   "commune": "Valloire",
+   "epci": {
+    "nom": "CC Maurienne Galibier",
+    "siren": "247300452"
+   },
+   "stations": [
+    {
+     "station": "Valloire",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Galibier-Thabor",
+     "exploitantRM": "SEM Valloire",
+     "kmPistesDomaine": 160,
+     "kmPistesStation": null,
+     "remonteesMecaniques": 30,
+     "altitudeBasse": 1430,
+     "altitudeHaute": 2750,
+     "denivele": 1320,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 17503,
+     "litsAnnee": "2016",
+     "officeTourisme": {
+      "nom": "Valloire Tourisme",
+      "adresse": "210 rue des Grandes Alpes",
+      "codePostal": "73450",
+      "commune": "Valloire",
+      "telephone": "04 79 59 03 96",
+      "email": "info@valloire.net",
+      "siteWeb": "https://www.valloire.net"
+     },
+     "notes": {
+      "km": "Domaine relié (Galibier-Thabor) ; station seule : pas de chiffre séparé (160 km à deux)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr; Galibier-Thabor (chiffre commun)"
+     }
+    }
+   ]
+  },
+  "73307": {
+   "codeInsee": "73307",
+   "commune": "Valmeinier",
+   "epci": {
+    "nom": "CC Maurienne Galibier",
+    "siren": "247300452"
+   },
+   "stations": [
+    {
+     "station": "Valmeinier",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Galibier-Thabor",
+     "exploitantRM": "SEMVAL",
+     "kmPistesDomaine": 160,
+     "kmPistesStation": null,
+     "remonteesMecaniques": 30,
+     "altitudeBasse": 1430,
+     "altitudeHaute": 2750,
+     "denivele": 1320,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 10739,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "OT de Valmeinier",
+      "adresse": "72 esplanade des Islettes (Valmeinier 1800)",
+      "codePostal": "73450",
+      "commune": "Valmeinier",
+      "telephone": "04 79 59 53 69",
+      "email": "info@valmeinier.com",
+      "siteWeb": "https://www.valmeinier.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Galibier-Thabor) ; station seule : pas de chiffre séparé (160 km à deux)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr; Galibier-Thabor (chiffre commun)"
+     }
+    }
+   ]
+  },
+  "73318": {
+   "codeInsee": "73318",
+   "commune": "Villarembert",
+   "epci": {
+    "nom": "CC Cœur de Maurienne Arvan",
+    "siren": "200070464"
+   },
+   "stations": [
+    {
+     "station": "Le Corbier",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Les Sybelles",
+     "exploitantRM": "SATVAC",
+     "kmPistesDomaine": 275,
+     "kmPistesStation": 90,
+     "remonteesMecaniques": 17,
+     "altitudeBasse": 1100,
+     "altitudeHaute": 2620,
+     "denivele": 1520,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 11000,
+     "litsAnnee": null,
+     "officeTourisme": {
+      "nom": "OT Le Corbier",
+      "adresse": "461 promenade du Front de Neige",
+      "codePostal": "73300",
+      "commune": "Villarembert",
+      "telephone": "04 79 83 04 04",
+      "email": "info@le-corbier.com",
+      "siteWeb": "https://www.le-corbier.com"
+     },
+     "notes": {
+      "km": "Domaine relié (Sybelles)",
+      "remontees": "skiinfo.fr",
+      "altitudes": "skiinfo.fr; à vérifier : semble couvrir les Sybelles",
+      "lits": "Approximatif"
+     }
+    }
+   ]
+  },
+  "73322": {
+   "codeInsee": "73322",
+   "commune": "Villarodin-Bourget",
+   "epci": {
+    "nom": "CC Haute Maurienne Vanoise",
+    "siren": "200070340"
+   },
+   "stations": [
+    {
+     "station": "La Norma",
+     "vallee": "Maurienne",
+     "domaineSkiable": "Indépendant",
+     "exploitantRM": "SAEM Société de gestion de La Norma",
+     "kmPistesDomaine": 65,
+     "kmPistesStation": 65,
+     "remonteesMecaniques": 13,
+     "altitudeBasse": 1352,
+     "altitudeHaute": 2746,
+     "denivele": 1394,
+     "journeesSkieurs": null,
+     "journeesSkieursNote": "n.c. (non publié)",
+     "litsTouristiques": 5487,
+     "litsAnnee": "2014",
+     "officeTourisme": {
+      "nom": "Maison du tourisme de La Norma",
+      "adresse": "Maison de La Norma",
+      "codePostal": "73500",
+      "commune": "Villarodin-Bourget",
+      "telephone": "04 79 05 99 06",
+      "email": "info@hautemaurienne.com",
+      "siteWeb": "https://www.la-norma.com"
+     },
+     "notes": {
+      "km": "Station",
+      "remontees": "skiresort.com",
+      "altitudes": "skiresort.com",
+      "office": "Rattaché à Haute Maurienne Vanoise (standard commun)"
+     }
+    }
+   ]
+  }
+ },
+ "index": {
+  "aillon le jeune": "73004",
+  "aillons margeriaz": "73004",
+  "aime la plagne": "73006",
+  "albiez montrond": "73013",
+  "arc 1600": "73054",
+  "arc 1800": "73054",
+  "arc 1950": "73054",
+  "arc 2000": "73054",
+  "areches": "73034",
+  "areches beaufort": "73034",
+  "aussois": "73023",
+  "beaufort": "73034",
+  "bessans": "73040",
+  "bonneval sur arc": "73047",
+  "bourg st maurice": "73054",
+  "brides les bains": "73057",
+  "champagny en vanoise": "73071",
+  "courchevel": "73227",
+  "crest voland": "73094",
+  "fontcouverte la toussuire": "73116",
+  "hauteluce": "73132",
+  "la feclaz": "73098",
+  "la norma": "73322",
+  "la plagne": "73150",
+  "la plagne tarentaise": "73150",
+  "la plagne vallee": "73006",
+  "la rosiere": "73176",
+  "la tania": "73227",
+  "la toussuire": "73116",
+  "lanslebourg": "73290",
+  "lanslevillard": "73290",
+  "le corbier": "73318",
+  "les aillons": "73004",
+  "les allues": "73015",
+  "les arcs": "73054",
+  "les avanchers valmorel": "73024",
+  "les belleville": "73257",
+  "les coches": "73150",
+  "les deserts": "73098",
+  "les karellis": "73173",
+  "les menuires": "73257",
+  "les saisies": "73132",
+  "meribel": "73015",
+  "meribel mottaret": "73015",
+  "modane": "73157",
+  "montchavin": "73150",
+  "montchavin les coches": "73150",
+  "montricher albanne": "73173",
+  "montvalezan": "73176",
+  "notre dame de bellecombe": "73186",
+  "peisey": "73197",
+  "peisey nancroix": "73197",
+  "peisey vallandry": "73197",
+  "plagne centre": "73150",
+  "pralognan la vanoise": "73206",
+  "sainte foy tarentaise": "73232",
+  "st francois longchamp": "73235",
+  "st jean d arves": "73242",
+  "st martin de belleville": "73257",
+  "st sorlin d arves": "73280",
+  "termignon": "73290",
+  "tignes": "73296",
+  "val cenis": "73290",
+  "val d isere": "73304",
+  "val thorens": "73257",
+  "valfrejus": "73157",
+  "vallandry": "73197",
+  "valloire": "73306",
+  "valmeinier": "73307",
+  "valmorel": "73024",
+  "villarembert": "73318",
+  "villarodin bourget": "73322"
+ },
+ "parEpci": {
+  "200023299": [
+   {
+    "nom": "Les Menuires",
+    "codeInsee": "73257",
+    "altitudeBasse": 1450,
+    "altitudeHaute": 2850,
+    "domaineSkiable": "Les 3 Vallées"
+   },
+   {
+    "nom": "Saint-Martin-de-Belleville",
+    "codeInsee": "73257",
+    "altitudeBasse": 1450,
+    "altitudeHaute": 2850,
+    "domaineSkiable": "Les 3 Vallées"
+   },
+   {
+    "nom": "Val Thorens",
+    "codeInsee": "73257",
+    "altitudeBasse": 1825,
+    "altitudeHaute": 3230,
+    "domaineSkiable": "Les 3 Vallées"
+   }
+  ],
+  "200040798": [
+   {
+    "nom": "Brides-les-Bains",
+    "codeInsee": "73057",
+    "altitudeBasse": null,
+    "altitudeHaute": null,
+    "domaineSkiable": "Les 3 Vallées (télécabine vers Méribel)"
+   },
+   {
+    "nom": "Champagny-en-Vanoise",
+    "codeInsee": "73071",
+    "altitudeBasse": 1250,
+    "altitudeHaute": 3000,
+    "domaineSkiable": "Paradiski"
+   },
+   {
+    "nom": "Courchevel",
+    "codeInsee": "73227",
+    "altitudeBasse": 1100,
+    "altitudeHaute": 2738,
+    "domaineSkiable": "Les 3 Vallées"
+   },
+   {
+    "nom": "La Tania",
+    "codeInsee": "73227",
+    "altitudeBasse": 1350,
+    "altitudeHaute": 2732,
+    "domaineSkiable": "Les 3 Vallées"
+   },
+   {
+    "nom": "Méribel",
+    "codeInsee": "73015",
+    "altitudeBasse": 1100,
+    "altitudeHaute": 2952,
+    "domaineSkiable": "Les 3 Vallées"
+   },
+   {
+    "nom": "Pralognan-la-Vanoise",
+    "codeInsee": "73206",
+    "altitudeBasse": 1410,
+    "altitudeHaute": 2355,
+    "domaineSkiable": "Indépendant"
+   }
+  ],
+  "200068997": [
+   {
+    "nom": "Arêches-Beaufort",
+    "codeInsee": "73034",
+    "altitudeBasse": 1080,
+    "altitudeHaute": 2300,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Crest-Voland Cohennoz",
+    "codeInsee": "73094",
+    "altitudeBasse": 1230,
+    "altitudeHaute": 2069,
+    "domaineSkiable": "Espace Diamant"
+   },
+   {
+    "nom": "Les Saisies",
+    "codeInsee": "73132",
+    "altitudeBasse": 1150,
+    "altitudeHaute": 2069,
+    "domaineSkiable": "Espace Diamant"
+   },
+   {
+    "nom": "Notre-Dame-de-Bellecombe",
+    "codeInsee": "73186",
+    "altitudeBasse": 1150,
+    "altitudeHaute": 2069,
+    "domaineSkiable": "Espace Diamant"
+   }
+  ],
+  "200069110": [
+   {
+    "nom": "Aillons-Margériaz",
+    "codeInsee": "73004",
+    "altitudeBasse": 1370,
+    "altitudeHaute": 1785,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "La Féclaz",
+    "codeInsee": "73098",
+    "altitudeBasse": 1326,
+    "altitudeHaute": 1525,
+    "domaineSkiable": "Indépendant (Savoie Grand Revard, nordique et alpin)"
+   }
+  ],
+  "200070340": [
+   {
+    "nom": "Aussois",
+    "codeInsee": "73023",
+    "altitudeBasse": 1530,
+    "altitudeHaute": 2705,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Bessans",
+    "codeInsee": "73040",
+    "altitudeBasse": 1706,
+    "altitudeHaute": 1842,
+    "domaineSkiable": "Indépendant (ski nordique)"
+   },
+   {
+    "nom": "Bonneval-sur-Arc",
+    "codeInsee": "73047",
+    "altitudeBasse": 1797,
+    "altitudeHaute": 2947,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "La Norma",
+    "codeInsee": "73322",
+    "altitudeBasse": 1352,
+    "altitudeHaute": 2746,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Val Cenis",
+    "codeInsee": "73290",
+    "altitudeBasse": 1300,
+    "altitudeHaute": 2800,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Valfréjus",
+    "codeInsee": "73157",
+    "altitudeBasse": 1550,
+    "altitudeHaute": 2737,
+    "domaineSkiable": "Indépendant"
+   }
+  ],
+  "200070464": [
+   {
+    "nom": "Albiez-Montrond",
+    "codeInsee": "73013",
+    "altitudeBasse": 1520,
+    "altitudeHaute": 2100,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "La Toussuire",
+    "codeInsee": "73116",
+    "altitudeBasse": 1800,
+    "altitudeHaute": 2400,
+    "domaineSkiable": "Les Sybelles"
+   },
+   {
+    "nom": "Le Corbier",
+    "codeInsee": "73318",
+    "altitudeBasse": 1100,
+    "altitudeHaute": 2620,
+    "domaineSkiable": "Les Sybelles"
+   },
+   {
+    "nom": "Les Karellis",
+    "codeInsee": "73173",
+    "altitudeBasse": 1550,
+    "altitudeHaute": 2482,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Saint-Jean-d'Arves",
+    "codeInsee": "73242",
+    "altitudeBasse": 1100,
+    "altitudeHaute": 2620,
+    "domaineSkiable": "Les Sybelles"
+   },
+   {
+    "nom": "Saint-Sorlin-d'Arves",
+    "codeInsee": "73280",
+    "altitudeBasse": 1500,
+    "altitudeHaute": 2620,
+    "domaineSkiable": "Les Sybelles"
+   }
+  ],
+  "247300015": [
+   {
+    "nom": "Valmorel",
+    "codeInsee": "73024",
+    "altitudeBasse": 1350,
+    "altitudeHaute": 2550,
+    "domaineSkiable": "Le Grand Domaine"
+   }
+  ],
+  "247300254": [
+   {
+    "nom": "La Rosière",
+    "codeInsee": "73176",
+    "altitudeBasse": 1850,
+    "altitudeHaute": 2800,
+    "domaineSkiable": "Espace San Bernardo (avec La Thuile, Italie)"
+   },
+   {
+    "nom": "Les Arcs",
+    "codeInsee": "73054",
+    "altitudeBasse": 1200,
+    "altitudeHaute": 3226,
+    "domaineSkiable": "Paradiski"
+   },
+   {
+    "nom": "Sainte-Foy-Tarentaise",
+    "codeInsee": "73232",
+    "altitudeBasse": 1550,
+    "altitudeHaute": 2620,
+    "domaineSkiable": "Indépendant"
+   },
+   {
+    "nom": "Tignes",
+    "codeInsee": "73296",
+    "altitudeBasse": 1550,
+    "altitudeHaute": 3450,
+    "domaineSkiable": "Tignes – Val d'Isère (ex-Espace Killy)"
+   },
+   {
+    "nom": "Val d'Isère",
+    "codeInsee": "73304",
+    "altitudeBasse": 1850,
+    "altitudeHaute": 3456,
+    "domaineSkiable": "Tignes – Val d'Isère (ex-Espace Killy)"
+   }
+  ],
+  "247300361": [
+   {
+    "nom": "Saint-François-Longchamp",
+    "codeInsee": "73235",
+    "altitudeBasse": 1450,
+    "altitudeHaute": 2550,
+    "domaineSkiable": "Le Grand Domaine"
+   }
+  ],
+  "247300452": [
+   {
+    "nom": "Valloire",
+    "codeInsee": "73306",
+    "altitudeBasse": 1430,
+    "altitudeHaute": 2750,
+    "domaineSkiable": "Galibier-Thabor"
+   },
+   {
+    "nom": "Valmeinier",
+    "codeInsee": "73307",
+    "altitudeBasse": 1430,
+    "altitudeHaute": 2750,
+    "domaineSkiable": "Galibier-Thabor"
+   }
+  ],
+  "247300817": [
+   {
+    "nom": "La Plagne",
+    "codeInsee": "73150",
+    "altitudeBasse": 1250,
+    "altitudeHaute": 3250,
+    "domaineSkiable": "Paradiski"
+   },
+   {
+    "nom": "Montchavin-Les Coches",
+    "codeInsee": "73150",
+    "altitudeBasse": 1250,
+    "altitudeHaute": 3250,
+    "domaineSkiable": "Paradiski"
+   },
+   {
+    "nom": "Peisey-Vallandry",
+    "codeInsee": "73197",
+    "altitudeBasse": 1650,
+    "altitudeHaute": 3250,
+    "domaineSkiable": "Paradiski"
+   }
+  ]
+ }
+}
