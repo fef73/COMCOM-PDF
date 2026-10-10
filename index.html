@@ -70,6 +70,15 @@
   .addf .lnk{color:var(--text-lo);cursor:pointer;text-decoration:underline}
   .add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
   #sugg{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+  #ski{display:none;margin-top:12px}
+  #ski.on{display:block}
+  #ski .addf{flex-direction:column;align-items:stretch;gap:8px}
+  #ski .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #ski .row .n{min-width:190px;font-weight:600}
+  #ski .row input[type=number]{width:86px}
+  #ski .row small{color:var(--text-lo)}
+  #ski .row .lnk{font-size:12px}
+  #ski #skiOk{align-self:flex-start;background:var(--live);color:#0b1622;border-color:var(--live);font-size:13px;font-weight:700;padding:8px 16px}
   #bStop{border-color:var(--danger);color:var(--danger)}
   #bStop:hover{background:var(--danger);color:#0b1622}
   #sugg button{color:var(--live);border-color:var(--hairline);padding:5px 10px;font-size:11.5px}
@@ -166,6 +175,7 @@
       <button id="bAdd">Chercher</button>
       <div id="sugg"></div>
     </div>
+    <div id="ski"></div>
   </div>
   <button id="bGo" disabled>Générer la fiche</button>
   <button id="bStop" style="display:none">■ Arrêter le téléchargement</button>
@@ -297,7 +307,7 @@ async function chargerListe(){
     PACKINFO=null; await appliquerPack(code); majPackInfo();
     $('titre').value=$('epci').selectedOptions[0].text;
     $('liste').classList.add('on'); afficherListe();
-    await altitudes(LIST.filter(c=>!ok(c.alt))); afficherListe();
+    await altitudes(LIST.filter(c=>!ok(c.alt))); afficherListe(); await majSki();
     st(LIST.length+' communes. Décochez celles à exclure, ajoutez-en si besoin, puis générez la fiche.');
     if(!new URLSearchParams(location.search).get('ajouts')) setTimeout(demarrageAuto,300);
   }catch(e){st('Erreur : '+e.message);}
@@ -343,7 +353,7 @@ function afficherListe(){
   majNav(); majMeteo();
 }
 $('coms').onclick=e=>{
-  if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();return;}
+  if(e.target.dataset.x!==undefined){e.preventDefault();LIST.splice(+e.target.dataset.x,1);afficherListe();majSki();return;}
   if(e.target.dataset.i!==undefined){LIST[+e.target.dataset.i].on=e.target.checked;afficherListe();}
 };
 $('tous').onclick=()=>{LIST.forEach(c=>c.on=true);afficherListe();};
@@ -388,6 +398,52 @@ $('bAdd').onclick=async()=>{
   }catch(e){$('sugg').innerHTML='<span style="font-size:12px">Commune introuvable.</span>';}
 };
 $('qc').onkeydown=e=>{if(e.key==='Enter')$('bAdd').click();};
+
+// ---------- Stations de ski du territoire (donnees/stations-ski-savoie.json) ----------
+// Les stations de l'intercommunalité sont proposées ; l'altitude de calcul est saisie par l'utilisateur
+// (repères : altitudes basse et haute des remontées mécaniques). Chaque station est ajoutée comme une commune
+// supplémentaire (code INSEE de sa commune + altitude), comme l'ajout manuel.
+let SKI=null;
+async function skiData(){
+  if(SKI===null){ try{const r=await fetch('donnees/stations-ski-savoie.json',{cache:'no-cache'}); SKI=r.ok?await r.json():false;}catch(e){SKI=false;} }
+  return SKI||null;
+}
+const skiDeja=s=>LIST.some(c=>c.ext&&c.insee===s.codeInsee&&(c.nomFiche||c.nom.replace(/ \(\d+ m\)$/,''))===s.nom);
+async function majSki(){
+  const box=$('ski'), d=await skiData(), L=d&&d.parEpci&&d.parEpci[$('epci').value];
+  if(!L||!L.length){box.classList.remove('on'); box.innerHTML=''; return;}
+  const m=v=>ok(v)?v.toLocaleString('fr-FR')+' m':'n.c.';
+  box.innerHTML=`<div class="addf"><b>⛷ Stations de ski du territoire</b>
+    <span style="color:var(--text-lo)">Cochez une station et indiquez l'altitude à laquelle la calculer (front de neige, milieu ou haut du domaine). Repères : altitudes basse et haute des remontées.</span>
+    ${L.map((s,i)=>`<div class="row"><label><input type="checkbox" data-s="${i}" ${skiDeja(s)?'disabled':''}> <span class="n">${s.nom}</span></label>
+      <input type="number" data-a="${i}" min="-10" max="4810" step="1" placeholder="altitude" ${skiDeja(s)?'disabled':''}> m
+      <small>bas ${ok(s.altitudeBasse)?`<span class="lnk" data-f="${i}" data-v="${s.altitudeBasse}">${m(s.altitudeBasse)}</span>`:'n.c.'}
+      · haut ${ok(s.altitudeHaute)?`<span class="lnk" data-f="${i}" data-v="${s.altitudeHaute}">${m(s.altitudeHaute)}</span>`:'n.c.'}
+      ${s.domaineSkiable&&!/^Indépendant/.test(s.domaineSkiable)?' · '+s.domaineSkiable:''}${skiDeja(s)?' · déjà dans la liste':''}</small></div>`).join('')}
+    <button id="skiOk">✓ Ajouter les stations cochées</button></div>`;
+  box.classList.add('on');
+  box.onclick=e=>{ const f=e.target.dataset.f; if(f===undefined) return;
+    const a=box.querySelector(`[data-a="${f}"]`); if(a.disabled) return; a.value=e.target.dataset.v;
+    box.querySelector(`[data-s="${f}"]`).checked=true; };
+  box.oninput=e=>{ const k=e.target.dataset.a; if(k!==undefined&&e.target.value!=='') box.querySelector(`[data-s="${k}"]`).checked=true; };
+  $('skiOk').onclick=async()=>{
+    const sel=[...box.querySelectorAll('[data-s]:checked')].map(x=>+x.dataset.s);
+    if(!sel.length){st('Cochez au moins une station.');return;}
+    for(const i of sel){ const a=box.querySelector(`[data-a="${i}"]`);
+      if(a.value===''||!ok(+a.value)){a.focus(); st(`Indiquez l'altitude de ${L[i].nom}.`); return;} }
+    st('Ajout des stations…');
+    try{
+      for(const i of sel){
+        const s=L[i], alt=Math.round(+box.querySelector(`[data-a="${i}"]`).value);
+        const c=await getJSON(`https://geo.api.gouv.fr/communes/${s.codeInsee}?fields=nom,code,centre,mairie,population`);
+        const p=(await altitudes([toCom(c)]))[0];
+        const n=LIST.filter(x=>x.nom===s.nom).length;
+        LIST.push(withCache({...p,nom:n?`${s.nom} (${alt} m)`:s.nom,nomFiche:s.nom!==p.nom?s.nom:undefined,altFix:alt,ext:true,on:true}));
+      }
+      afficherListe(); majSki(); st(`${sel.length} station(s) ajoutée(s) à la liste.`);
+    }catch(e){st('Ajout impossible : '+e.message);}
+  };
+}
 $('titre').oninput=majNav;
 function clesPack(){return LIST.filter(c=>!c.ext).map(c=>[cleC(c),c]);}
 
@@ -484,7 +540,7 @@ function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'
       LIST.push(withCache({...p,nom:n&&ok(altFix)?`${nom} (${altFix} m)`:nom,nomFiche:nom!==p.nom?nom:undefined,altFix,ext:true,on:true}));
     }
     if(q.get('titre')) $('titre').value=q.get('titre');
-    $('liste').classList.add('on'); afficherListe();
+    $('liste').classList.add('on'); afficherListe(); majSki();
     st('Territoire repris de l\'autre fiche.'); setTimeout(demarrageAuto,300);
   }catch(e){st('Territoire du lien introuvable : '+e.message);}
 })();
