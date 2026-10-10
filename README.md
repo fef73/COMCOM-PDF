@@ -48,6 +48,7 @@ Site : https://fef73.github.io/COMCOM-PDF/ — accès protégé par mot de passe
 |---|---|
 | `index.html` | Générateur de fiches climat |
 | `comcom-pollution.html` | Générateur de fiches qualité de l'air |
+| `portail.html` | Liste des 18 intercommunalités de Savoie avec liens directs vers leurs deux fiches |
 | `preparer-postes-mf.html` | Préparation des postes Météo-France |
 | `postes-mf.json` | Pluie et neige fraîche mesurées par poste |
 
@@ -74,6 +75,7 @@ donnees/comair-v2-2023-2025/<code EPCI>.json     ← fiche qualité de l'air
 - La page lit le pack dès que l'intercommunalité est choisie ; les communes ajoutées à la main restent téléchargées en direct.
 - **📦 Exporter le pack** : enregistre le pack de l'intercommunalité affichée (une fois la fiche générée).
 - **🗂 Préparer tout le département** : charge chaque intercommunalité du département (73 par défaut), génère la fiche et enregistre son pack ; les packs déjà faits sont sautés, on peut donc relancer après un quota journalier.
+- **État** : les packs climat et air des 18 intercommunalités de Savoie sont publiés (octobre 2026). La page `portail.html` les liste.
 - Le nom du dossier contient la version des données : au changement d'année, les anciens packs sont ignorés et il faut les régénérer (mise à jour annuelle).
 
 ## Licence

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intercommunalités de Savoie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1622; --bg-panel:#101f30; --bg-card:#132539; --bg-input:#0f1d2c; --hairline:#22384f;
+    --text-hi:#f3f6f9; --text-lo:#8fa4b8; --live:#7ee4b8; --danger:#e76f51;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--text-hi);font-family:'Space Grotesk',sans-serif;padding:0 16px;
+    background:radial-gradient(ellipse 900px 600px at 10% -10%,rgba(126,228,184,.08),transparent 60%),
+               radial-gradient(ellipse 700px 500px at 90% 0%,rgba(231,111,81,.10),transparent 55%),var(--bg);min-height:100vh}
+  .wrap{max-width:960px;margin:0 auto}
+  .top{margin:28px 0 18px;border-bottom:1px solid var(--hairline);padding-bottom:18px}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--live);margin-bottom:8px}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-style:italic;font-size:clamp(28px,4vw,40px);margin:0 0 6px;letter-spacing:-.01em}
+  .subtitle{color:var(--text-lo);font-size:14px;max-width:68ch;line-height:1.5}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+  input{background:var(--bg-input);color:var(--text-hi);border:1px solid var(--hairline);border-radius:8px;padding:9px 12px;font:14px 'Space Grotesk',sans-serif;outline:none;flex:1;min-width:200px}
+  input:focus{border-color:var(--live)}
+  .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
+  ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .card{background:var(--bg-card);border:1px solid var(--hairline);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .card h2{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:0;line-height:1.25}
+  .meta{margin:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-lo)}
+  .go{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+  .go a{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-hi);text-decoration:none;border:1px solid var(--hairline);border-radius:8px;padding:7px 11px;background:var(--bg-panel)}
+  .go a:hover{border-color:var(--live);color:var(--live)}
+  .note{color:var(--text-lo);font-size:13px;line-height:1.55;margin:22px 0 0;max-width:80ch}
+  .pagefoot{margin:28px auto 28px;padding-top:16px;border-top:1px solid var(--hairline);text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-lo)}
+  .pagefoot .sig{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}
+  .pagefoot .sig img{width:26px;height:26px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 1px var(--hairline)}
+  .pagefoot .contact{display:inline-block;margin-top:12px;color:var(--live);text-decoration:none;border:1px solid var(--hairline);border-radius:8px;padding:5px 12px}
+  .pagefoot .copy{margin-top:14px;font-size:11px;opacity:.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">comparateur-meteo · Savoie (73)</div>
+  <h1>Les intercommunalités de Savoie</h1>
+  <div class="subtitle">18 intercommunalités, 280 communes. Pour chacune, une fiche climat (1991–2025) et une fiche qualité de l'air (2023–2025) sur une page A4, prêtes à imprimer. Les fiches s'ouvrent tout de suite, sans temps de chargement.</div>
+</header>
+<div class="bar"><input id="q" type="search" placeholder="Rechercher une intercommunalité…" aria-label="Rechercher"><span class="count" id="n">18 intercommunalités</span></div>
+<ul id="list">
+<li class="card" data-q="ca arlysère">
+  <h2>CA Arlysère</h2>
+  <p class="meta"><span>39 communes</span><span>327 – 1212 m</span><span>2 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200068997">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200068997">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc du canton de la chambre">
+  <h2>CC du Canton de La Chambre</h2>
+  <p class="meta"><span>12 communes</span><span>442 – 1402 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300361">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300361">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc cœur de chartreuse">
+  <h2>CC Cœur de Chartreuse</h2>
+  <p class="meta"><span>17 communes</span><span>386 – 896 m</span><span>5 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200040111">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200040111">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc cœur de maurienne arvan">
+  <h2>CC Cœur de Maurienne Arvan</h2>
+  <p class="meta"><span>14 communes</span><span>559 – 1533 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200070464">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200070464">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc cœur de savoie">
+  <h2>CC Cœur de Savoie</h2>
+  <p class="meta"><span>41 communes</span><span>261 – 1039 m</span><span>3 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200041010">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200041010">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc cœur de tarentaise">
+  <h2>CC Cœur de Tarentaise</h2>
+  <p class="meta"><span>6 communes</span><span>481 – 1379 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200023299">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200023299">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="ca du grand chambéry">
+  <h2>CA du Grand Chambéry</h2>
+  <p class="meta"><span>38 communes</span><span>263 – 952 m</span><span>4 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200069110">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200069110">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="ca grand lac">
+  <h2>CA Grand Lac</h2>
+  <p class="meta"><span>28 communes</span><span>236 – 693 m</span><span>4 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200068674">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200068674">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc haute maurienne vanoise">
+  <h2>CC Haute Maurienne Vanoise</h2>
+  <p class="meta"><span>10 communes</span><span>1032 – 1815 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=200070340">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200070340">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc de haute-tarentaise">
+  <h2>CC de Haute-Tarentaise</h2>
+  <p class="meta"><span>8 communes</span><span>827 – 2089 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300254">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300254">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc du lac d&#x27;aiguebelette (ccla)">
+  <h2>CC du Lac d&#x27;Aiguebelette (CCLA)</h2>
+  <p class="meta"><span>10 communes</span><span>382 – 590 m</span><span>2 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300668">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300668">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc les versants d&#x27;aime">
+  <h2>CC Les Versants d&#x27;Aime</h2>
+  <p class="meta"><span>4 communes</span><span>686 – 1326 m</span><span>pas de station à moins de 20 km</span></p>
+  <div class="go"><a href="index.html?epci=247300817">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300817">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc maurienne galibier">
+  <h2>CC Maurienne Galibier</h2>
+  <p class="meta"><span>6 communes</span><span>749 – 1483 m</span><span>2 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300452">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300452">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc porte de maurienne">
+  <h2>CC Porte de Maurienne</h2>
+  <p class="meta"><span>11 communes</span><span>326 – 1029 m</span><span>2 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300676">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300676">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc val guiers">
+  <h2>CC Val Guiers</h2>
+  <p class="meta"><span>11 communes</span><span>215 – 494 m</span><span>3 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300528">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300528">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc val vanoise">
+  <h2>CC Val Vanoise</h2>
+  <p class="meta"><span>9 communes</span><span>588 – 1417 m</span><span>pas de station à moins de 20 km</span></p>
+  <div class="go"><a href="index.html?epci=200040798">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=200040798">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc des vallées d&#x27;aigueblanche">
+  <h2>CC des Vallées d&#x27;Aigueblanche</h2>
+  <p class="meta"><span>3 communes</span><span>439 – 1084 m</span><span>1 station de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300015">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300015">🌫️ Qualité de l'air</a></div>
+</li>
+<li class="card" data-q="cc de yenne">
+  <h2>CC de Yenne</h2>
+  <p class="meta"><span>13 communes</span><span>225 – 665 m</span><span>2 stations de mesure</span></p>
+  <div class="go"><a href="index.html?epci=247300262">🌡️ Fiche climat</a><a href="comcom-pollution.html?epci=247300262">🌫️ Qualité de l'air</a></div>
+</li>
+</ul>
+<p class="note">Les fiches sont réservées aux personnes disposant du code d'accès. Climat : réanalyses Copernicus ERA5-Land et ERA5, recalées sur les postes Météo-France. Qualité de l'air : modèle européen CAMS, recalé sur les stations de mesure de l'Agence européenne de l'environnement, et radon (Géorisques). La CC Cœur de Chartreuse compte aussi des communes de l'Isère.</p>
+<footer class="pagefoot">
+  <div class="sig"><img src="data:image/jpeg;base64,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" alt="fef73"><span>Créé par fef73 avec claude.ai · 8 octobre 2026</span></div>
+  <a class="contact" href="https://forms.gle/EMZtxMBJCUE6HJXp8" target="_blank" rel="noopener">✉️ Contact / suggestion</a>
+  <div class="copy">© 2026 Fernand (fef73) — Tous droits réservés · All rights reserved</div>
+</footer>
+</div>
+<script>
+const q=document.getElementById('q'),n=document.getElementById('n'),cards=[...document.querySelectorAll('.card')];
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+q.addEventListener('input',()=>{const t=norm(q.value.trim());let k=0;
+  cards.forEach(c=>{const ok=!t||norm(c.dataset.q).includes(t);c.style.display=ok?'':'none';if(ok)k++;});
+  n.textContent=k+' intercommunalité'+(k>1?'s':'');});
+</script>
+</body>
+</html>
