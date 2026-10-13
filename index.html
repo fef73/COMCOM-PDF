@@ -110,6 +110,8 @@
   .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   svg{width:100%;height:auto;display:block}
   .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
+  .est{color:#8a96a3;font-style:italic}
+  .cap p{margin:3px 0}
   .note{font-size:7.8pt;line-height:1.35;margin-top:8px;padding:6px 8px;background:#f4f7fa;border-left:3px solid var(--acc);border-radius:3px}
   .note b{color:var(--acc)}
   .note p{margin:2px 0}
@@ -287,7 +289,7 @@ let LIST=[];   // {nom,insee,pop,lat,lon,on,ext, alt?,Y?}
 // Point de calcul : la mairie (chef-lieu, là où vivent les habitants) ; à défaut, le centre géométrique de la commune
 const toCom=c=>{const g=(c.mairie||c.centre).coordinates;return {nom:c.nom,insee:c.code,pop:c.population||0,lon:g[0],lat:g[1],on:true};};
 const cleC=c=>c.insee+(ok(c.altFix)?'@'+c.altFix:'');
-function withCache(c){const k=cacheGet(cleC(c)); if(k){c.alt=k.alt;c.Y=k.Y;} return c;}
+function withCache(c){const k=cacheGet(cleC(c)); if(k){c.alt=k.alt;c.Y=k.Y;if(k.H)c.H=k.H;} return c;}
 // Altitude au centre de la commune (modèle de terrain 90 m), jusqu'à 100 points par requête
 async function altitudes(pts){
   for(let i=0;i<pts.length;i+=100){
@@ -469,7 +471,7 @@ async function appliquerPack(code){
     const r=await fetch(`donnees/${CACHE}/${code}.json`,{cache:'no-cache'}); if(!r.ok) return 0;
     const j=await r.json(); let n=0;
     Object.entries(j.items||{}).forEach(([k,v])=>{ PACK[k]=v; try{localStorage.setItem(CACHE+'-'+k,JSON.stringify(v));}catch(e){} n++; });
-    LIST.forEach(c=>{ if(!c.Y){const v=PACK[cleC(c)]; if(v){c.alt=v.alt; c.Y=v.Y;}} });
+    LIST.forEach(c=>{ if(!c.Y){const v=PACK[cleC(c)]; if(v){c.alt=v.alt; c.Y=v.Y; if(v.H) c.H=v.H;}} });
     PACKINFO={n,date:j.genere,nom:j.nom}; majPackInfo(); return n;
   }catch(e){return 0;}
 }
@@ -478,7 +480,7 @@ function majPackInfo(){ $('packInfo').textContent=PACKINFO?`📦 Données préca
 function exporterPack(){
   const code=$('epci').value; if(!code){st('Choisissez d\'abord une intercommunalité.');return false;}
   const items={}, manque=[];
-  clesPack().forEach(([k,c])=>{ const v=c.Y?{alt:c.alt,Y:c.Y}:cacheGet(k); if(v&&v.Y) items[k]=v; else manque.push(c.nom); });
+  clesPack().forEach(([k,c])=>{ const v=c.Y?{alt:c.alt,Y:c.Y,...(c.H?{H:c.H}:{})}:cacheGet(k); if(v&&v.Y) items[k]=v; else manque.push(c.nom); });
   if(manque.length){st(`Pack incomplet : ${manque.length} point(s) non chargé(s) (${manque.slice(0,3).join(', ')}…). Générez d'abord la fiche.`);return false;}
   const pack={version:CACHE,genere:new Date().toISOString(),epci:code,nom:$('epci').selectedOptions[0].text,items};
   telecharger(`${code}.json`,JSON.stringify(pack));
@@ -750,7 +752,7 @@ const lancer=async()=>{
       const P={}; jp.daily.time.forEach((t,k)=>P[t]=jp.daily.precipitation_sum[k]);
       j.daily.precipitation_sum=j.daily.time.map(t=>P[t]);
       if(!j.daily.precipitation_sum.some(ok)) throw new Error('précipitations absentes de la réponse Open-Meteo pour '+c.nom);
-      c.alt=j.elevation; c.Y=yearly(j.daily); cacheSet(cleC(c),{alt:c.alt,Y:c.Y}); afficherListe(); $('bGo').disabled=true;
+      c.alt=j.elevation; c.Y=yearly(j.daily); c.H=ratiosNeige(j.daily); cacheSet(cleC(c),{alt:c.alt,Y:c.Y,H:c.H}); afficherListe(); $('bGo').disabled=true;
       if(STOP){$('bGo').textContent='Reprendre le téléchargement'; return;}   // la commune en cours est gardée
     }
     const reste=JOB.com.filter(c=>!c.Y).length;
@@ -822,42 +824,102 @@ function scatter(com){
   return s+'</svg>';
 }
 
-// ---------- Horizon neige (méthode de l'altitude équivalente) ----------
+// ---------- Horizon neige ----------
 // Niveaux TRACC (France métropolitaine, vs préindustriel) : +2 °C en 2030, +2,7 °C en 2050, +4 °C en 2100.
 // Environ +1,3 °C est déjà contenu dans 1991–2020 : réchauffement ajouté +0,7 / +1,4 / +2,7 °C.
-// +1 °C ≈ conditions d'une altitude 150 m plus basse : la neige future d'une commune est lue,
-// sur le territoire, à l'altitude abaissée d'autant (interpolation entre les communes).
 const HN={dt:[[2030,0.7],[2050,1.4],[2100,2.7]],mParDegre:150};
-function horizonNeige(com){
+
+// Méthode principale : les jours 1991–2020 de la commune sont rejoués avec +ΔT, avec la même règle que la colonne
+// « Neige /an normale » (tout en neige à 0 °C ou moins, tout en pluie à 2 °C ou plus, linéaire entre les deux).
+// On garde le rapport neige future / neige actuelle pour ΔT = 0 à 4 °C (pas de 0,1 °C).
+function ratiosNeige(d){
+  const tm=[],pr=[];
+  d.time.forEach((t,i)=>{const y=+t.slice(0,4); if(y<N0||y>N1)return;
+    const a=d.temperature_2m_mean[i],p=d.precipitation_sum[i]; if(ok(a)&&ok(p)&&p>0){tm.push(a);pr.push(p);}});
+  const S=dt=>{let s=0;for(let i=0;i<tm.length;i++)s+=pr[i]*Math.min(1,Math.max(0,(2-tm[i]-dt)/2));return s;};
+  const s0=S(0); if(!(s0>0)) return {r:null};
+  const r=[]; for(let k=0;k<=40;k++) r.push(Math.round(S(k/10)/s0*1000)/1000);
+  return {r};
+}
+const neigeFuture=(c,dt)=>!c.H.r?0:c.sN*c.H.r[Math.min(40,Math.round(dt*10))];
+
+// Méthode de secours (≈) tant que les données jour par jour d'une commune ne sont pas chargées :
+// +1 °C ≈ altitude 150 m plus basse, lue sur les autres communes du territoire.
+function estimation(com){
   const g={}; com.forEach(c=>{if(ok(c.alt)&&ok(c.sN)){const k=Math.round(c.alt);(g[k]=g[k]||[]).push(c.sN);}});
   const P=Object.keys(g).map(Number).sort((a,b)=>a-b).map(a=>[a,mean(g[a])]);
   if(P.length<2) return null;
-  const at=a=>{   // neige normale à l'altitude a ; sous la commune la plus basse, prolongement de la pente
+  return a=>{
     if(a<=P[0][0]){const [a0,s0]=P[0],[a1,s1]=P[1];
-      // décroissance géométrique (la neige s'amenuise sans s'annuler brutalement) ; sinon prolongement linéaire
-      if(s0>0&&s1>s0) return {v:s0*Math.pow(s0/s1,(a0-a)/(a1-a0)),ext:a<a0};
-      const k=(s1-s0)/(a1-a0||1);return {v:Math.max(0,Math.min(s0,s0+k*(a-a0))),ext:a<a0};}
-    for(let i=1;i<P.length;i++) if(a<=P[i][0]){const [a0,s0]=P[i-1],[a1,s1]=P[i];return {v:s0+(s1-s0)*(a-a0)/(a1-a0),ext:false};}
-    return {v:P[P.length-1][1],ext:false};
+      if(s0>0&&s1>s0) return s0*Math.pow(s0/s1,(a0-a)/(a1-a0));
+      const k=(s1-s0)/(a1-a0||1); return Math.max(0,Math.min(s0,s0+k*(a-a0)));}
+    for(let i=1;i<P.length;i++) if(a<=P[i][0]){const [a0,s0]=P[i-1],[a1,s1]=P[i];return s0+(s1-s0)*(a-a0)/(a1-a0);}
+    return P[P.length-1][1];
   };
-  return com.map(c=>({c,fut:HN.dt.map(([an,dt])=>({an,...at(c.alt-dt*HN.mParDegre)}))}));
 }
+
 function futSection(com){
-  const H=horizonNeige(com);
-  if(!H) return `<h2>Horizon neige</h2><div class="cap">Il faut au moins deux communes d'altitudes différentes pour estimer l'horizon neige.</div>`;
-  let ext=false;
-  const cell=x=>{if(x.ext)ext=true;return `${f0(x.v)}${x.ext?'†':''}`;};
+  const est=estimation(com);
+  let nEst=0;
+  const val=(c,dt)=>{
+    if(c.H) return {v:neigeFuture(c,dt),est:false};
+    nEst++; return {v:est?est(c.alt-dt*HN.mParDegre):NaN,est:true};
+  };
+  const cell=x=>x.est?`<span class="est">≈ ${f0(x.v)}</span>`:f0(x.v);
   const pc=(a,b)=>!ok(a)||!(b>0)?'—':(v=>(v>=0?'+':'−')+f0(Math.abs(v))+' %')((a/b-1)*100);
-  const rows=H.map(({c,fut})=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.sN)}</td>${fut.map(cell).map(v=>`<td>${v}</td>`).join('')}<td class="${fut[2].v<c.sN*0.5?'hot':''}">${pc(fut[2].v,c.sN)}</td></tr>`).join('');
+  const rows=com.map(c=>{const fut=HN.dt.map(([,dt])=>val(c,dt)), f=fut[2];
+    return `<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.sN)}</td>${fut.map(x=>`<td>${cell(x)}</td>`).join('')}<td class="${f.v<c.sN*0.5?'hot':''}">${f.est?`<span class="est">≈ ${pc(f.v,c.sN)}</span>`:pc(f.v,c.sN)}</td></tr>`;}).join('');
   const haute=com[com.length-1];
   return `<h2>Horizon neige · trajectoire officielle de réchauffement (TRACC)</h2>
     <table>
       <tr><th>Commune</th><th>Alt. (m)</th><th>Neige /an normale (cm)*</th><th>2030 (cm)</th><th>2050 (cm)</th><th>2100 (cm)</th><th>Évolution 2100</th></tr>
       ${rows}
     </table>
-    <div class="cap">Chaque degré de réchauffement rapproche le climat d'une commune de celui d'une altitude environ 150 m plus basse : en 2050 (+1,4 °C par rapport à 1991–2020), ${haute.nom} (${f0(haute.alt)} m) recevrait la neige qu'on observe aujourd'hui vers ${f0(Math.round((haute.alt-210)/10)*10)} m sur le territoire.
-      Niveaux TRACC pour la France métropolitaine : +2 °C en 2030, +2,7 °C en 2050, +4 °C en 2100 par rapport au préindustriel, dont environ +1,3 °C déjà présent sur 1991–2020.
-      Les Alpes se réchauffent plus vite que la moyenne nationale : ces valeurs sont plutôt optimistes.${ext?' † Valeur prolongée sous l\'altitude de la commune la plus basse du territoire.':''}</div>`;
+    <div class="cap">
+      <p><b>Ce que montre le tableau.</b> La neige fraîche qui tomberait chaque année (en cm, pas l'épaisseur au sol) si le climat se réchauffe comme le prévoit la trajectoire officielle de l'État (TRACC) : +2 °C en 2030, +2,7 °C en 2050 et +4 °C en 2100 par rapport à l'ère préindustrielle. Environ +1,3 °C étant déjà inclus dans la période 1991–2020, on ajoute +0,7 °C (2030), +1,4 °C (2050) et +2,7 °C (2100).</p>
+      <p><b>Comment c'est calculé.</b> Pour chaque commune, les 30 années 1991–2020 sont rejouées jour par jour avec ce réchauffement ajouté. Chaque jour, on recalcule la part des précipitations qui tombe en neige, avec la même règle que la colonne « Neige /an normale » : tout en neige à 0 °C ou moins, tout en pluie à 2 °C ou plus. Les quantités d'eau sont supposées inchangées. Repère : chaque degré gagné rapproche le climat de celui d'une altitude environ 150 m plus basse ; en 2050, ${haute.nom} (${f0(haute.alt)} m) aurait à peu près le climat d'une commune située vers ${f0(Math.round((haute.alt-210)/10)*10)} m aujourd'hui.</p>
+      <p><b>Limites.</b> La TRACC est une moyenne nationale et les Alpes se réchauffent plus vite : ces valeurs sont plutôt optimistes. D'une année à l'autre, la neige restera très variable.</p>
+      ${nEst?`<p><span class="est">≈</span> <b>Estimation provisoire</b> (${nEst/HN.dt.length} commune${nEst/HN.dt.length>1?'s':''}) : les données jour par jour de ces communes ne sont pas encore chargées (chargement en cours, ou Open-Meteo momentanément indisponible). La valeur est déduite des autres communes du territoire situées plus bas, puis prolongée si aucune n'est assez basse : un simple ordre de grandeur. Elle sera remplacée automatiquement.</p>`:''}
+    </div>`;
+}
+
+// Chargement des données jour par jour manquantes (communes venant d'un pack ou d'un ancien cache)
+async function chargerH(c){
+  const b=`https://archive-api.open-meteo.com/v1/archive?latitude=${c.lat}&longitude=${c.lon}&start_date=${N0}-01-01&end_date=${N1}-12-31${ok(c.altFix)?'&elevation='+c.altFix:''}&timezone=Europe%2FParis`;
+  const j=await getJSON(`${b}&daily=temperature_2m_mean&models=era5_land`);
+  const jp=await getJSON(`${b}&daily=precipitation_sum&models=era5`);
+  const P={}; jp.daily.time.forEach((t,k)=>P[t]=jp.daily.precipitation_sum[k]);
+  j.daily.precipitation_sum=j.daily.time.map(t=>P[t]);
+  return ratiosNeige(j.daily);
+}
+const pauseSec=async(n,lab)=>{for(let s=n;s>0;s--){st(lab(s));await new Promise(r=>setTimeout(r,1000));}};
+let HRUN=false, HECHEC=false;
+async function completerHorizon(){
+  if(HRUN||HECHEC||RUN||!DERNIERE||!$('oFutur').checked) return;
+  const manque=[...new Map(DERNIERE.com.filter(c=>!c.H).map(c=>[cleC(c),c])).values()];
+  if(!manque.length) return;
+  HRUN=true;
+  try{
+    for(let i=0;i<manque.length;i++){
+      if(!$('oFutur').checked) return;
+      if(i&&i%LOT===0) await pauseSec(PAUSE,s=>`Horizon neige : pause ${mmss(s)} pour respecter le quota Open-Meteo (${i}/${manque.length} communes calculées).`);
+      const c=manque[i];
+      st(`Horizon neige : calcul jour par jour pour ${c.nom} (${i+1}/${manque.length})…`);
+      let H;
+      try{H=await chargerH(c);}
+      catch(e){ if(!/minute/.test(e.message)) throw e;
+        await pauseSec(65,s=>`Horizon neige : quota minute atteint, reprise dans ${mmss(s)}…`); H=await chargerH(c); }
+      const k=cleC(c);
+      [...LIST,...DERNIERE.com].forEach(x=>{if(cleC(x)===k)x.H=H;});
+      if(PACK[k]) PACK[k].H=H;
+      const v=cacheGet(k); if(v) cacheSet(k,{...v,H});
+      render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal);
+    }
+    st('Horizon neige : toutes les communes sont calculées jour par jour. Fiche prête.');
+  }catch(e){
+    HECHEC=true;
+    st(`Horizon neige interrompu : ${e.message}. Les valeurs marquées ≈ restent provisoires ; décochez puis recochez « Horizon neige » pour relancer.`);
+  }finally{ HRUN=false; }
 }
 
 // ---------- Rendu de la fiche ----------
@@ -921,9 +983,10 @@ function render(nom,com,cal){
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
   fitA4();
+  if($('oFutur').checked) setTimeout(completerHorizon,0);
 }
 
-$('oFutur').addEventListener('change',()=>{ majNav(); if(DERNIERE) render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal); });
+$('oFutur').addEventListener('change',()=>{ HECHEC=false; majNav(); if(DERNIERE) render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal); });
 if(new URLSearchParams(location.search).get('futur')==='1') $('oFutur').checked=true;
 
 // Réduit légèrement la fiche si elle dépasse une page A4
