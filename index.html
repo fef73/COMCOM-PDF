@@ -593,6 +593,8 @@ $('bClear').onclick=()=>{
 };
 
 // Agrégats annuels d'une série journalière
+// Conversion eau → neige fraîche : 0,7 cm par mm d'eau, comme Open-Meteo (et la fiche communale mairies-pdf)
+const NEIGE_CM_PAR_MM=0.7;
 function yearly(d){
   const Y={};
   d.time.forEach((t,i)=>{
@@ -602,7 +604,7 @@ function yearly(d){
     if(ok(d.precipitation_sum[i])) o.p+=d.precipitation_sum[i];
     // Part neigeuse selon la température moyenne du jour à l'altitude de la commune :
     // tout en neige à 0 °C ou moins, tout en pluie à 2 °C ou plus, linéaire entre les deux.
-    // 1 mm d'eau ≈ 1 cm de neige fraîche (rapport 1:10).
+    // o.s est l'eau tombée en neige (mm) ; conversion en cm de neige fraîche à l'affichage (NEIGE_CM_PAR_MM).
     const pr=d.precipitation_sum[i];
     if(ok(pr)) o.np++;
     if(ok(pr)&&ok(tm)) o.s+=pr*Math.min(1,Math.max(0,(2-tm)/2));
@@ -764,7 +766,7 @@ const lancer=async()=>{
     }else{
       const com=JOB.com.map(c=>{
         const Y=c.Y;
-        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),pR:avg(Y,R0,LAST,'p'),sN:avg(Y,N0,N1,'s'),sR:avg(Y,R0,LAST,'s'),
+        return {...c,tN:avg(Y,N0,N1,'t'),tR:avg(Y,R0,LAST,'t'),pN:avg(Y,N0,N1,'p'),pR:avg(Y,R0,LAST,'p'),sN:avg(Y,N0,N1,'s')*NEIGE_CM_PAR_MM,sR:avg(Y,R0,LAST,'s')*NEIGE_CM_PAR_MM,
           gN:avg(Y,N0,N1,'gel'),gR:avg(Y,R0,LAST,'gel'),hR:avg(Y,R0,LAST,'chaud')};
       });
       com.forEach(c=>c.dT=c.tR-c.tN);
@@ -970,7 +972,7 @@ function render(nom,com,cal){
     <div class="note">
       ${cal&&cal.neigeMes
       ?`<p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est calculé à partir de la neige fraîche <b>mesurée</b> par ${cal.nS} postes Météo-France situés à moins de 20 km, ajustée à l'altitude de chaque commune. C'est une valeur représentative du secteur à cette altitude, pas une mesure prise dans la commune.</p>`
-      :`<p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C (1 mm d'eau ≈ 1 cm de neige). C'est un ordre de grandeur, pas une mesure.</p>`}
+      :`<p><b>Comment lire la neige ?</b> Il s'agit du cumul de neige fraîche tombée dans l'année, pas de l'épaisseur au sol. Il est estimé : chaque jour, les précipitations du secteur sont comptées en neige si la température à l'altitude de la commune est sous 0 °C, en pluie au-dessus de 2 °C ; 1 mm d'eau tombé en neige donne environ 0,7 cm de neige fraîche (conversion d'Open-Meteo, identique à la fiche communale). C'est un ordre de grandeur, pas une mesure.</p>`}
       ${cal?`<p><b>Valeurs recalées sur les mesures Météo-France.</b> Les quantités d'eau ont été ajustées sur ${cal.n} poste${cal.n>1?'s':''} de mesure situé${cal.n>1?'s':''} à moins de 15 km${cal.grad?", en tenant compte de l'altitude (il tombe plus d'eau en montagne)":''}. ${cal.neigeMes?'Le tableau des postes ci-dessus donne les mesures qui ont servi au calcul de la neige.':"La neige de chaque commune reste une estimation, mais sur une quantité d'eau réaliste ; le tableau des postes ci-dessus permet de la comparer à la neige fraîche réellement mesurée."}</p>`
       :`<p><b>Pourquoi la neige augmente-t-elle avec l'altitude ?</b> Les précipitations proviennent d'une maille d'environ 25 km : la même quantité d'eau est retenue pour toutes les communes du secteur, soit ${f0(pN)} mm par an en moyenne (1991–2020). Seule la température change avec l'altitude : plus haut, une plus grande part de cette eau tombe en neige. En réalité, il tombe aussi plus d'eau en altitude : les valeurs des communes hautes sont plutôt sous-estimées, celles des communes basses plutôt surestimées.</p>`}
       ${cal&&cal.neigeMes&&ok(cal.ratioS)
