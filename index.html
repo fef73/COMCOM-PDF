@@ -177,6 +177,8 @@
     </div>
     <div id="ski"></div>
   </div>
+  <label style="display:inline-flex;align-items:center;gap:6px;margin-right:10px;font-size:14px;cursor:pointer" title="Ajoute à la fiche les chutes de neige attendues en 2030, 2050 et 2100 selon la trajectoire officielle de réchauffement (TRACC)">
+    <input type="checkbox" id="oFutur"> Horizon neige 2030 · 2050 · 2100</label>
   <button id="bGo" disabled>Générer la fiche</button>
   <button id="bStop" style="display:none">■ Arrêter le téléchargement</button>
   <button id="bPrint" disabled>Imprimer / PDF</button>
@@ -520,6 +522,7 @@ function etatURL(){
   const ex=LIST.filter(c=>!c.ext&&!c.on).map(c=>c.insee); if(ex.length) q.set('exclus',ex.join(','));
   const aj=LIST.filter(c=>c.ext&&c.on).map(c=>c.insee+(ok(c.altFix)?'@'+c.altFix:'')+'~'+(c.nomFiche||c.nom.replace(/ \(\d+ m\)$/,'')));
   if(aj.length) q.set('ajouts',aj.join('|'));
+  if($('oFutur')&&$('oFutur').checked) q.set('futur','1');
   return q.toString();
 }
 function majNav(){const a=$('nav'); if(a) a.href=a.dataset.page+(LIST.length?'?'+etatURL():'');}
@@ -819,8 +822,48 @@ function scatter(com){
   return s+'</svg>';
 }
 
+// ---------- Horizon neige (méthode de l'altitude équivalente) ----------
+// Niveaux TRACC (France métropolitaine, vs préindustriel) : +2 °C en 2030, +2,7 °C en 2050, +4 °C en 2100.
+// Environ +1,3 °C est déjà contenu dans 1991–2020 : réchauffement ajouté +0,7 / +1,4 / +2,7 °C.
+// +1 °C ≈ conditions d'une altitude 150 m plus basse : la neige future d'une commune est lue,
+// sur le territoire, à l'altitude abaissée d'autant (interpolation entre les communes).
+const HN={dt:[[2030,0.7],[2050,1.4],[2100,2.7]],mParDegre:150};
+function horizonNeige(com){
+  const g={}; com.forEach(c=>{if(ok(c.alt)&&ok(c.sN)){const k=Math.round(c.alt);(g[k]=g[k]||[]).push(c.sN);}});
+  const P=Object.keys(g).map(Number).sort((a,b)=>a-b).map(a=>[a,mean(g[a])]);
+  if(P.length<2) return null;
+  const at=a=>{   // neige normale à l'altitude a ; sous la commune la plus basse, prolongement de la pente
+    if(a<=P[0][0]){const [a0,s0]=P[0],[a1,s1]=P[1];
+      // décroissance géométrique (la neige s'amenuise sans s'annuler brutalement) ; sinon prolongement linéaire
+      if(s0>0&&s1>s0) return {v:s0*Math.pow(s0/s1,(a0-a)/(a1-a0)),ext:a<a0};
+      const k=(s1-s0)/(a1-a0||1);return {v:Math.max(0,Math.min(s0,s0+k*(a-a0))),ext:a<a0};}
+    for(let i=1;i<P.length;i++) if(a<=P[i][0]){const [a0,s0]=P[i-1],[a1,s1]=P[i];return {v:s0+(s1-s0)*(a-a0)/(a1-a0),ext:false};}
+    return {v:P[P.length-1][1],ext:false};
+  };
+  return com.map(c=>({c,fut:HN.dt.map(([an,dt])=>({an,...at(c.alt-dt*HN.mParDegre)}))}));
+}
+function futSection(com){
+  const H=horizonNeige(com);
+  if(!H) return `<h2>Horizon neige</h2><div class="cap">Il faut au moins deux communes d'altitudes différentes pour estimer l'horizon neige.</div>`;
+  let ext=false;
+  const cell=x=>{if(x.ext)ext=true;return `${f0(x.v)}${x.ext?'†':''}`;};
+  const pc=(a,b)=>!ok(a)||!(b>0)?'—':(v=>(v>=0?'+':'−')+f0(Math.abs(v))+' %')((a/b-1)*100);
+  const rows=H.map(({c,fut})=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.sN)}</td>${fut.map(cell).map(v=>`<td>${v}</td>`).join('')}<td class="${fut[2].v<c.sN*0.5?'hot':''}">${pc(fut[2].v,c.sN)}</td></tr>`).join('');
+  const haute=com[com.length-1];
+  return `<h2>Horizon neige · trajectoire officielle de réchauffement (TRACC)</h2>
+    <table>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Neige /an normale (cm)*</th><th>2030 (cm)</th><th>2050 (cm)</th><th>2100 (cm)</th><th>Évolution 2100</th></tr>
+      ${rows}
+    </table>
+    <div class="cap">Chaque degré de réchauffement rapproche le climat d'une commune de celui d'une altitude environ 150 m plus basse : en 2050 (+1,4 °C par rapport à 1991–2020), ${haute.nom} (${f0(haute.alt)} m) recevrait la neige qu'on observe aujourd'hui vers ${f0(Math.round((haute.alt-210)/10)*10)} m sur le territoire.
+      Niveaux TRACC pour la France métropolitaine : +2 °C en 2030, +2,7 °C en 2050, +4 °C en 2100 par rapport au préindustriel, dont environ +1,3 °C déjà présent sur 1991–2020.
+      Les Alpes se réchauffent plus vite que la moyenne nationale : ces valeurs sont plutôt optimistes.${ext?' † Valeur prolongée sous l\'altitude de la commune la plus basse du territoire.':''}</div>`;
+}
+
 // ---------- Rendu de la fiche ----------
+let DERNIERE=null;
 function render(nom,com,cal){
+  DERNIERE={nom,com,cal};
   const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
   const terr=years.map(y=>mean(com.map(c=>c.Y[y]&&c.Y[y].t)));
   const tN=mean(terr.slice(0,N1-N0+1)), tR=mean(terr.slice(R0-N0));
@@ -856,6 +899,7 @@ function render(nom,com,cal){
       <div><h2>Température selon l'altitude</h2>${scatter(com)}
         <div class="cap">Chaque point est une commune (normale 1991–2020). Environ −0,5 à −0,6 °C par 100 m en montagne.</div></div>
     </div>
+    ${$('oFutur').checked?futSection(com):''}
     ${cal?`<h2>Mesures des postes Météo-France proches</h2>
     <table>
       <tr><th>Poste</th><th>Alt. (m)</th><th>Le plus proche de</th><th>Distance (km)</th><th>Pluie+neige /an normale (mm)</th><th>Neige fraîche /an normale (cm)</th><th>Neige fraîche /an ${R0}–${LAST} (cm)</th></tr>
@@ -878,6 +922,9 @@ function render(nom,com,cal){
   $('sheet').classList.add('on');
   fitA4();
 }
+
+$('oFutur').addEventListener('change',()=>{ majNav(); if(DERNIERE) render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal); });
+if(new URLSearchParams(location.search).get('futur')==='1') $('oFutur').checked=true;
 
 // Réduit légèrement la fiche si elle dépasse une page A4
 function fitA4(){
