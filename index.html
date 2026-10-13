@@ -318,6 +318,14 @@ async function chargerListe(){
 }
 // Fiche communale (générateur mairies-pdf), ouverte toute prête grâce au lancement par URL
 const MAIRIES_URL='https://fef73.github.io/mairies-pdf/';
+// Prévisions à venir et horizon neige (page meteo-future du dépôt mairies-pdf), même point de calcul : la mairie
+const FUTUR_URL='https://fef73.github.io/mairies-pdf/meteo-future.html';
+function futurURL(c){
+  const q=new URLSearchParams({insee:c.insee});
+  if(ok(c.altFix)) q.set('alt',c.altFix);
+  if(c.nomFiche||c.ext) q.set('nom',c.nomFiche||c.nom.replace(/ \(\d+ m\)$/,''));
+  return FUTUR_URL+'?'+q.toString();
+}
 function ficheURL(c){
   const q=new URLSearchParams({insee:c.insee});
   if(ok(c.altFix)) q.set('alt',c.altFix);
@@ -349,6 +357,7 @@ function afficherListe(){
     <input type="checkbox" data-i="${i}" ${c.on?'checked':''}> <span class="n">${c.nom}</span> <small>${altTxt(c)}</small>${c.Y?' ✓':''}
     <a class="fiche" href="${meteoURL([c])}" target="_blank" rel="noopener" title="Météo actuelle et prévisions à ${c.nom}">🌦</a>
     <a class="fiche" href="${ficheURL(c)}" target="_blank" rel="noopener" title="Ouvrir la fiche climat communale de ${c.nom}">📄</a>
+    <a class="fiche" href="${futurURL(c)}" target="_blank" rel="noopener" title="Prévisions 16 jours, tendance saisonnière et horizon neige à ${c.nom}">🔮</a>
     ${c.ext?`<span class="x" data-x="${i}" title="Retirer">✕</span>`:''}</label>`).join('');
   const n=LIST.filter(c=>c.on).length, deja=LIST.filter(c=>c.on&&c.Y).length;
   $('nb').textContent=`${n} commune(s) retenue(s), dont ${deja} déjà chargée(s)`;
