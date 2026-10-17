@@ -939,7 +939,7 @@ let DERNIERE=null;
 // Arrêtés de catastrophe naturelle « inondation / coulée de boue / lave torrentielle » depuis 1982,
 // plan de prévention des risques inondation (PPRI), territoire à risque important (TRI), atlas des zones inondables (AZI).
 const GR_API='https://georisques.gouv.fr/api/v1/gaspar/';
-const INOND_KEY='inond-v3-', INOND_TTL=30*864e5;
+const INOND_KEY='inond-v4-', INOND_TTL=30*864e5;
 const RX_INOND=/inond|crue|coul[ée]es? de boue|torrent|ruissel|submersion/i;
 const grVals=o=>{const out=[];(function w(x){if(x==null)return;if(typeof x==='string')out.push(x);else if(typeof x==='object')Object.values(x).forEach(w);})(o);return out.join(' | ');};
 async function grGet(path,insee){
@@ -974,6 +974,10 @@ async function inondation(insee){
   if(!insee) return null;
   try{ const c=JSON.parse(localStorage.getItem(INOND_KEY+insee)||'null'); if(c&&Date.now()-c.t<INOND_TTL) return c.v; }catch(e){}
   const [cat,rsq,tri,azi]=await Promise.allSettled(['catnat','risques','tri','azi'].map(p=>grGet(p,insee)));
+  // rapport « Ma commune face aux risques » : remontée de nappe et lien vers le rapport complet (plan de prévention…)
+  let rap=null; try{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),9000);
+    const r=await fetch(`https://georisques.gouv.fr/api/v1/resultats_rapport_risque?code_insee=${insee}`,{signal:ctl.signal}); clearTimeout(t);
+    if(r.ok) rap=await r.json(); }catch(e){}
   if(cat.status!=='fulfilled') return null;
   const ev=cat.value.filter(o=>RX_INOND.test(grVals(o)));
   const ys=ev.map(grAnnee).filter(Boolean);
@@ -985,7 +989,11 @@ async function inondation(insee){
   const v={
     n:ev.length, recent:ys.filter(y=>y>=2016).length, last:ys.length?Math.max(...ys):null, first:ys.length?Math.min(...ys):null,
     torrent:ev.filter(o=>/torrent/i.test(grVals(o))).length,
-    types, inondRec, barrage:det==null?null:det.some(r=>r.num_risque==='23'),
+    types:(()=>{ const nappe=rap&&rap.risquesNaturels&&rap.risquesNaturels.remonteeNappe&&rap.risquesNaturels.remonteeNappe.present;
+      if(types==null) return nappe?['remontée de nappe']:null; return nappe&&!types.includes('remontée de nappe')?[...types,'remontée de nappe']:types; })(),
+    inondRec:inondRec||!!(rap&&rap.risquesNaturels&&rap.risquesNaturels.inondation&&rap.risquesNaturels.inondation.present),
+    barrage:det==null?(rap&&rap.risquesTechnologiques&&rap.risquesTechnologiques.ruptureBarrage?!!rap.risquesTechnologiques.ruptureBarrage.present:null):det.some(r=>r.num_risque==='23'),
+    url:rap&&typeof rap.url==='string'&&/^https:\/\/www\.georisques\.gouv\.fr\//.test(rap.url)?rap.url:null,
     tri:tri.status==='fulfilled'?tri.value.length>0:null,
     azi:azi.status==='fulfilled'?azi.value.length>0:null
   };
@@ -1008,7 +1016,7 @@ async function majInond(com){
   const liste=a=>a.length<=4?a.map(nom).join(', '):a.slice(0,3).map(nom).join(', ')+` et ${a.length-3} autres`;
   cap.innerHTML=`<b>Risque inondation.</b> ${tot} arrêté${tot>1?'s':''} de catastrophe naturelle depuis 1982 sur le territoire${tot?`, dont ${rec} depuis 2016`:''}${tor?` et ${tor} pour lave torrentielle`:''}${sans?` ; ${sans} commune${sans>1?'s':''} sans aucun arrêté`:''}. `+
     (rq.length?`Risque inondation recensé par l'État dans ${rec2} commune${rec2>1?'s':''} sur ${rq.length}`+
-      [['crue torrentielle'],['lave torrentielle'],['ruissellement et coulée de boue'],['crue lente']].map(([t])=>nT(t)?`${t} : ${nT(t)}`:'').filter(Boolean).reduce((a,x,i)=>a+(i?', ':' (')+x,'')+(rq.some(k=>R[k].types.length)?')':'')+
+      [['crue torrentielle'],['lave torrentielle'],['ruissellement et coulée de boue'],['crue lente'],['remontée de nappe']].map(([t])=>nT(t)?`${t} : ${nT(t)}`:'').filter(Boolean).reduce((a,x,i)=>a+(i?', ':' (')+x,'')+(rq.some(k=>R[k].types.length)?')':'')+
       (bar?` ; rupture de barrage : ${bar} commune${bar>1?'s':''}`:'')+'. ':'')+
     (tri.length?`Territoire à risque important d'inondation : ${liste(tri)}. `:'')+(azi?`${azi} commune${azi>1?'s':''} dans un atlas des zones inondables.`:'')+
     (ok.length<ins.length?` (${ins.length-ok.length} commune${ins.length-ok.length>1?'s':''} sans réponse de Géorisques.)`:'');
@@ -1070,7 +1078,7 @@ function render(nom,com,cal){
     </div>
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au chef-lieu de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
       * Pluie et neige : voir l'encadré ci-dessus.<br>
-      ** Arrêtés inondation : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. Source : Géorisques, base GASPAR (ministère de la Transition écologique).<br>
+      ** Arrêtés inondation : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. Source : Géorisques, base GASPAR (ministère de la Transition écologique) ; plan de prévention et détail de chaque commune sur georisques.gouv.fr, « Ma commune face aux risques ».<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
