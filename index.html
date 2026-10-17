@@ -975,7 +975,8 @@ const PPR_URL='donnees/ppr-savoie.json'; let PPR_P=null;
 const pprData=()=>PPR_P||(PPR_P=fetch(PPR_URL,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null));
 const PPR_RANG={'approuvé':3,'prescrit':2};
 function pprFor(D,insee){
-  if(!D||!D.communes) return null;
+  // fichier absent ou vide (préparation ratée) : on n'affiche rien plutôt que « aucun plan »
+  if(!D||!D.communes||!D.nbPlans||!Object.keys(D.communes).length) return null;
   const couvert=(D.departements||[]).includes(String(insee).slice(0,2)), l=D.communes[insee]||[];
   if(!l.length) return couvert?{etat:'aucun',autres:[]}:null;
   const avecI=l.filter(e=>e.inond&&PPR_RANG[e.inond.etat]).sort((a,b)=>PPR_RANG[b.inond.etat]-PPR_RANG[a.inond.etat]||String(b.inond.date).localeCompare(String(a.inond.date)));
