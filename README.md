@@ -57,6 +57,7 @@ Site : https://fef73.github.io/COMCOM-PDF/ — accès protégé par mot de passe
 | `comcom-pollution.html` | Générateur de fiches qualité de l'air |
 | `portail.html` | Liste des 18 intercommunalités de Savoie avec liens directs vers leurs deux fiches |
 | `preparer-postes-mf.html` | Préparation des postes Météo-France |
+| `preparer-ppr.html` | Préparation des plans de prévention des risques (Géorisques) → `donnees/ppr-savoie.json` |
 | `postes-mf.json` | Pluie et neige fraîche mesurées par poste |
 
 ## Fiche qualité de l'air (`comcom-pollution.html`)
