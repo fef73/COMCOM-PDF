@@ -1070,7 +1070,7 @@ function render(nom,com,cal){
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
     <table>
-      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th><th>Arrêtés inondation depuis 1982**</th><th>Plan de prévention inondation**</th></tr>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th><th>CatNat inond.**</th><th>PPRi**</th></tr>
       ${rows}
     </table>
     <div class="cap" id="inondCap">Risque inondation : interrogation de Géorisques…</div>
@@ -1098,7 +1098,7 @@ function render(nom,com,cal){
     </div>
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au chef-lieu de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
       * Pluie et neige : voir l'encadré ci-dessus.<br>
-      ** Arrêtés inondation : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. Plan de prévention inondation : année d'approbation du plan de prévention des risques le plus récent couvrant l'inondation (PPRi ou plan multirisques), « prescrit » s'il est en cours d'élaboration, « non » s'il n'y en a pas. Source : Géorisques, base GASPAR (ministère de la Transition écologique) ; plan de prévention et détail de chaque commune sur georisques.gouv.fr, « Ma commune face aux risques ».<br>
+      ** CatNat inond. : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. PPRi : plan de prévention des risques inondation, année d'approbation du plan le plus récent couvrant l'inondation (PPRi ou plan multirisques), « prescrit » s'il est en cours d'élaboration, « non » s'il n'y en a pas. Source : Géorisques, base GASPAR (ministère de la Transition écologique) ; plan de prévention et détail de chaque commune sur georisques.gouv.fr, « Ma commune face aux risques ».<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
