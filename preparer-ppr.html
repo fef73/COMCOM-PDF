@@ -71,16 +71,17 @@ $('go').onclick=async()=>{
     log('Lecture de la liste nationale des plans…');
     // l'API ne documente pas ses paramètres de pagination : on essaie plusieurs écritures
     // et on garde celle qui renvoie vraiment une autre page.
-    const VARIANTES=[['page','size'],['pageNumber','pageSize'],['page','page_size'],['page_number','page_size']];
-    const url=(v,p,t)=>`${API}?${v[0]}=${p}&${v[1]}=${t}`;
+    // [paramètre page, paramètre taille, numéro de la 1re page]
+    const VARIANTES=[['page','page_size',1],['page','size',1],['pageNumber','pageSize',0],['page','size',0],['page_number','page_size',0],['page_number','page_size',1]];
+    const url=(v,p,t)=>`${API}?${v[0]}=${p+v[2]}&${v[1]}=${t}`;
     const id0=j=>(j&&j.content&&j.content[0]&&j.content[0].idGaspar)||null;
     let premiere=null, V=null;
-    essais: for(const t of [100,10]) for(const v of VARIANTES){
+    essais: for(const t of [100]) for(const v of VARIANTES){
       try{
         const a=await get1(url(v,0,t)), b=await get1(url(v,1,t));
-        log(`  essai ${v[0]}/${v[1]}/${t} : ${(a.content||[]).length} plans par page, page 1 ${id0(b)&&id0(b)!==id0(a)?'différente':'identique'}`);
+        log(`  essai ${v[0]}=${v[2]}/${v[1]}=${t} : ${(a.content||[]).length} plans par page, page 1 ${id0(b)&&id0(b)!==id0(a)?'différente':'identique'}`);
         if(id0(b)&&id0(b)!==id0(a)){ premiere=a; V=v; break essais; }
-      }catch(e){ log(`  essai ${v[0]}/${v[1]}/${t} : refusé (${e.message})`); }
+      }catch(e){ log(`  essai ${v[0]}=${v[2]}/${v[1]}=${t} : refusé (${e.message})`); }
     }
     if(!V) throw new Error("impossible de passer à la page suivante de la liste Géorisques (pagination ignorée par l'API)");
     const taille=(premiere.content||[]).length||premiere.pageSize||10, pages=Math.ceil((premiere.totalElements||taille)/taille);
