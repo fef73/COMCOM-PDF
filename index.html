@@ -107,6 +107,8 @@
   th:first-child,td:first-child{text-align:left}
   th{font-size:7.6pt;color:var(--mute);font-weight:600;vertical-align:bottom;white-space:normal}
   td.hot{color:var(--warm);font-weight:600}
+  table.tc th,table.tc td{text-align:center}
+  table.tc th:first-child,table.tc td:first-child{text-align:left}
   tr.grp th[colspan],tr.grp th:not([rowspan]){text-align:center;border-bottom:1px solid #aab4bf;padding-bottom:1px}
   tr.grp th{border-bottom-color:transparent}
   tr.grp th[rowspan]{border-bottom:1px solid var(--line)}
@@ -1074,7 +1076,7 @@ function render(nom,com,cal){
       <div class="kpi"><b>${hottest}</b><span>Année la plus chaude depuis ${N0}</span></div>
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
-    <table>
+    <table class="tc">
       <tr class="grp"><th rowspan="2">Commune</th><th rowspan="2">Alt. (m)</th><th rowspan="2">Hab.</th><th colspan="2">Temp. (°C)</th>${cal?'<th rowspan="2">Pluie+ neige (mm/an)*</th>':''}<th colspan="2">Neige (cm/an)*</th><th colspan="2">Jours de gel /an</th><th>≥ 30 °C</th><th rowspan="2">CatNat inond.**</th><th rowspan="2">PPRi**</th></tr>
       <tr class="per"><th>91–20</th><th>écart ${PER}</th><th>91–20</th><th>${PER}</th><th>91–20</th><th>${PER}</th><th>${PER}</th></tr>
       ${rows}
