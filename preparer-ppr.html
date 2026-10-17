@@ -46,6 +46,8 @@ async function get(url){
     catch(e){ if(essai===3) throw e; await pause(3000); }
   }
 }
+// un seul essai, sans relance (pour tester les paramètres)
+async function get1(url){ const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 // date "jj/mm/aaaa" -> "aaaa-mm-jj"
 const iso=d=>{ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d||''); return m?`${m[3]}-${m[2]}-${m[1]}`:null; };
 // état d'un aléa : approuvé (et non abrogé/annulé), prescrit (et non déprescrit), sinon autre
@@ -73,10 +75,12 @@ $('go').onclick=async()=>{
     const url=(v,p,t)=>`${API}?${v[0]}=${p}&${v[1]}=${t}`;
     const id0=j=>(j&&j.content&&j.content[0]&&j.content[0].idGaspar)||null;
     let premiere=null, V=null;
-    for(const v of VARIANTES){
-      const a=await get(url(v,0,100)), b=await get(url(v,1,100));
-      log(`  essai ${v[0]}/${v[1]} : ${(a.content||[]).length} plans par page, page 1 ${id0(b)&&id0(b)!==id0(a)?'différente':'identique'}`);
-      if(id0(b)&&id0(b)!==id0(a)){ premiere=a; V=v; break; }
+    essais: for(const t of [100,10]) for(const v of VARIANTES){
+      try{
+        const a=await get1(url(v,0,t)), b=await get1(url(v,1,t));
+        log(`  essai ${v[0]}/${v[1]}/${t} : ${(a.content||[]).length} plans par page, page 1 ${id0(b)&&id0(b)!==id0(a)?'différente':'identique'}`);
+        if(id0(b)&&id0(b)!==id0(a)){ premiere=a; V=v; break essais; }
+      }catch(e){ log(`  essai ${v[0]}/${v[1]}/${t} : refusé (${e.message})`); }
     }
     if(!V) throw new Error("impossible de passer à la page suivante de la liste Géorisques (pagination ignorée par l'API)");
     const taille=(premiere.content||[]).length||premiere.pageSize||10, pages=Math.ceil((premiere.totalElements||taille)/taille);
