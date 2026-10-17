@@ -107,6 +107,10 @@
   th:first-child,td:first-child{text-align:left}
   th{font-size:7.6pt;color:var(--mute);font-weight:600;vertical-align:bottom;white-space:normal}
   td.hot{color:var(--warm);font-weight:600}
+  tr.grp th[colspan],tr.grp th:not([rowspan]){text-align:center;border-bottom:1px solid #aab4bf;padding-bottom:1px}
+  tr.grp th{border-bottom-color:transparent}
+  tr.grp th[rowspan]{border-bottom:1px solid var(--line)}
+  tr.per th{font-weight:500;padding-top:1px}
   .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   svg{width:100%;height:auto;display:block}
   .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
@@ -1058,6 +1062,7 @@ function render(nom,com,cal){
   const sgn=v=>(v>=0?'+':'−')+f0(Math.abs(v));
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
+  const PER=`${String(R0).slice(2)}–${String(LAST).slice(2)}`;
   const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
   $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
@@ -1070,7 +1075,8 @@ function render(nom,com,cal){
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
     <table>
-      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th><th>CatNat inond.**</th><th>PPRi**</th></tr>
+      <tr class="grp"><th rowspan="2">Commune</th><th rowspan="2">Alt. (m)</th><th rowspan="2">Hab.</th><th colspan="2">Temp. (°C)</th>${cal?'<th rowspan="2">Pluie+ neige (mm/an)*</th>':''}<th colspan="2">Neige (cm/an)*</th><th colspan="2">Jours de gel /an</th><th>≥ 30 °C</th><th rowspan="2">CatNat inond.**</th><th rowspan="2">PPRi**</th></tr>
+      <tr class="per"><th>91–20</th><th>écart ${PER}</th><th>91–20</th><th>${PER}</th><th>91–20</th><th>${PER}</th><th>${PER}</th></tr>
       ${rows}
     </table>
     <div class="cap" id="inondCap">Risque inondation : interrogation de Géorisques…</div>
@@ -1099,6 +1105,7 @@ function render(nom,com,cal){
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au chef-lieu de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
       * Pluie et neige : voir l'encadré ci-dessus.<br>
       ** CatNat inond. : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. PPRi : plan de prévention des risques inondation, année d'approbation du plan le plus récent couvrant l'inondation (PPRi ou plan multirisques), « prescrit » s'il est en cours d'élaboration, « non » s'il n'y en a pas. Source : Géorisques, base GASPAR (ministère de la Transition écologique) ; plan de prévention et détail de chaque commune sur georisques.gouv.fr, « Ma commune face aux risques ».<br>
+      Colonnes « 91–20 » : normale 1991–2020 ; « ${PER} » : moyenne ${R0}–${LAST} (écart de température par rapport à la normale).<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
