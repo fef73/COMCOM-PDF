@@ -949,7 +949,10 @@ async function grGet(path,insee){
     let r; try{ r=await fetch(`${GR_API}${path}?code_insee=${insee}&page=${p}&page_size=100`,{signal:ctl.signal}); } finally{ clearTimeout(t); }
     if(r.status===404) return out;
     if(!r.ok) throw new Error('Géorisques HTTP '+r.status);
-    const j=await r.json(), d=Array.isArray(j)?j:(j.data||[]);
+    const j=await r.json();
+    // réponse paginée nationale (ignore le code INSEE) : inutilisable ici
+    if(!Array.isArray(j)&&!Array.isArray(j.data)) throw new Error('Géorisques : réponse non filtrée par commune');
+    const d=Array.isArray(j)?j:j.data;
     out.push(...d);
     if(!d.length||p>=(+j.total_pages||1)) break;
   }
@@ -1000,7 +1003,7 @@ async function majInond(com){
   const tri=ok.filter(k=>R[k].tri), azi=ok.filter(k=>R[k].azi).length, sans=ok.filter(k=>!R[k].n).length;
   const liste=a=>a.length<=4?a.map(nom).join(', '):a.slice(0,3).map(nom).join(', ')+` et ${a.length-3} autres`;
   cap.innerHTML=`<b>Risque inondation.</b> ${tot} arrêté${tot>1?'s':''} de catastrophe naturelle depuis 1982 sur le territoire${tot?`, dont ${rec} depuis 2016`:''}${tor?` et ${tor} pour lave torrentielle`:''}${sans?` ; ${sans} commune${sans>1?'s':''} sans aucun arrêté`:''}. `+
-    `Plan de prévention du risque inondation : approuvé dans ${ppA} commune${ppA>1?'s':''}${ppP?`, prescrit dans ${ppP}`:''} sur ${ok.length}. `+
+    (ok.some(k=>R[k].ppri!=null)?`Plan de prévention du risque inondation : approuvé dans ${ppA} commune${ppA>1?'s':''}${ppP?`, prescrit dans ${ppP}`:''} sur ${ok.length}. `:'')+
     (tri.length?`Territoire à risque important d'inondation : ${liste(tri)}. `:'')+(azi?`${azi} commune${azi>1?'s':''} dans un atlas des zones inondables.`:'')+
     (ok.length<ins.length?` (${ins.length-ok.length} commune${ins.length-ok.length>1?'s':''} sans réponse de Géorisques.)`:'');
   fitA4();
