@@ -1031,7 +1031,7 @@ function render(nom,com,cal){
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
   const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td></tr>`).join('');
-  $('sheet').innerHTML=`
+  $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
     <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
     <div class="kpis">
@@ -1072,7 +1072,7 @@ function render(nom,com,cal){
       * Pluie et neige : voir l'encadré ci-dessus.<br>
       ** Arrêtés inondation : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. Source : Géorisques, base GASPAR (ministère de la Transition écologique).<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
-      La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
+      La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
   fitA4();
   if($('oFutur').checked) setTimeout(completerHorizon,0);
@@ -1083,10 +1083,18 @@ $('oFutur').addEventListener('change',()=>{ HECHEC=false; majNav(); if(DERNIERE)
 if(new URLSearchParams(location.search).get('futur')==='1') $('oFutur').checked=true;
 
 // Réduit légèrement la fiche si elle dépasse une page A4
+window.addEventListener('beforeprint',()=>fitA4());
+if(document.fonts) document.fonts.addEventListener('loadingdone',()=>fitA4());
 function fitA4(){
-  const s=$('sheet'); s.style.zoom=1;
-  const max=297*96/25.4, h=s.scrollHeight;
-  if(h>max) s.style.zoom=(max/h).toFixed(3);
+  // Tient sur une page A4 dans tous les navigateurs : le contenu (#shz) est réduit par transform (et non par zoom,
+  // mal géré à l'impression par Firefox), en gardant toute la largeur de la page.
+  const s=$('sheet'), z=$('shz'); if(!s||!z) return;
+  z.style.transform=''; z.style.width=''; s.style.height='297mm'; s.style.overflow='hidden';
+  const cs=getComputedStyle(s), avail=297*96/25.4-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-2;
+  if(z.scrollHeight<=avail) return;
+  const fits=k=>{ z.style.width=(100/k)+'%'; return z.scrollHeight*k<=avail; };
+  let lo=0.4, hi=1; for(let i=0;i<12;i++){ const m=(lo+hi)/2; if(fits(m)) lo=m; else hi=m; }
+  z.style.width=(100/lo)+'%'; z.style.transformOrigin='top left'; z.style.transform=`scale(${lo.toFixed(4)})`;
 }
 </script>
 </body>
