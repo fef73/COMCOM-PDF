@@ -935,6 +935,76 @@ async function completerHorizon(){
 
 // ---------- Rendu de la fiche ----------
 let DERNIERE=null;
+// ---------- Risque inondation (API Géorisques, base GASPAR du ministère) ----------
+// Arrêtés de catastrophe naturelle « inondation / coulée de boue / lave torrentielle » depuis 1982,
+// plan de prévention des risques inondation (PPRI), territoire à risque important (TRI), atlas des zones inondables (AZI).
+const GR_API='https://georisques.gouv.fr/api/v1/gaspar/';
+const INOND_KEY='inond-v1-', INOND_TTL=30*864e5;
+const RX_INOND=/inond|crue|coul[ée]es? de boue|torrent|ruissel|submersion/i;
+const grVals=o=>{const out=[];(function w(x){if(x==null)return;if(typeof x==='string')out.push(x);else if(typeof x==='object')Object.values(x).forEach(w);})(o);return out.join(' | ');};
+async function grGet(path,insee){
+  const out=[];
+  for(let p=1;p<=10;p++){
+    const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),9000);
+    let r; try{ r=await fetch(`${GR_API}${path}?code_insee=${insee}&page=${p}&page_size=100`,{signal:ctl.signal}); } finally{ clearTimeout(t); }
+    if(r.status===404) return out;
+    if(!r.ok) throw new Error('Géorisques HTTP '+r.status);
+    const j=await r.json(), d=Array.isArray(j)?j:(j.data||[]);
+    out.push(...d);
+    if(!d.length||p>=(+j.total_pages||1)) break;
+  }
+  return out;
+}
+// année de début de l'événement (champ dont le nom contient « debut », sinon première date trouvée)
+function grAnnee(o){
+  let first=null;
+  for(const [k,v] of Object.entries(o||{})){
+    if(typeof v!=='string') continue;
+    const m=v.match(/\b\d{1,2}\/\d{1,2}\/(\d{4})\b/)||v.match(/\b(\d{4})-\d{2}-\d{2}/);
+    if(!m) continue;
+    if(/deb/i.test(k)) return +m[1];
+    if(first==null) first=+m[1];
+  }
+  return first;
+}
+async function inondation(insee){
+  if(!insee) return null;
+  try{ const c=JSON.parse(localStorage.getItem(INOND_KEY+insee)||'null'); if(c&&Date.now()-c.t<INOND_TTL) return c.v; }catch(e){}
+  const [cat,ppr,tri,azi]=await Promise.allSettled(['catnat','pprn','tri','azi'].map(p=>grGet(p,insee)));
+  if(cat.status!=='fulfilled') return null;
+  const ev=cat.value.filter(o=>RX_INOND.test(grVals(o)));
+  const ys=ev.map(grAnnee).filter(Boolean);
+  const pp=ppr.status==='fulfilled'?ppr.value.filter(o=>RX_INOND.test(grVals(o))):null;
+  const approuve=o=>/approuv/i.test(grVals(o))||Object.entries(o).some(([k,v])=>/approb/i.test(k)&&v);
+  const v={
+    n:ev.length, recent:ys.filter(y=>y>=2016).length, last:ys.length?Math.max(...ys):null, first:ys.length?Math.min(...ys):null,
+    torrent:ev.filter(o=>/torrent/i.test(grVals(o))).length,
+    ppri:pp==null?null:(pp.length?(pp.some(approuve)?'approuvé':'prescrit'):'aucun'),
+    tri:tri.status==='fulfilled'?tri.value.length>0:null,
+    azi:azi.status==='fulfilled'?azi.value.length>0:null
+  };
+  try{ localStorage.setItem(INOND_KEY+insee,JSON.stringify({t:Date.now(),v})); }catch(e){}
+  return v;
+}
+let INOND_JOB=0;
+async function majInond(com){
+  const job=++INOND_JOB, ins=[...new Set(com.map(c=>c.insee).filter(Boolean))], R={};
+  for(let i=0;i<ins.length;i+=6) await Promise.all(ins.slice(i,i+6).map(async k=>{ try{ R[k]=await inondation(k); }catch(e){ R[k]=null; } }));
+  if(job!==INOND_JOB) return;
+  document.querySelectorAll('#sheet td.ino').forEach(td=>{ const v=R[td.dataset.i];
+    td.textContent=!v?'–':(v.n?`${v.n}${v.last?' ('+v.last+')':''}`:'0'); if(v&&v.recent) td.classList.add('hot'); });
+  const ok=ins.filter(k=>R[k]), cap=$('inondCap'); if(!cap) return;
+  if(!ok.length){ cap.textContent="Risque inondation : Géorisques n'a pas répondu, la colonne est vide. Régénérez la fiche dans un instant."; fitA4(); return; }
+  const nom=k=>(com.find(c=>c.insee===k)||{}).nom||k, tot=ok.reduce((s,k)=>s+R[k].n,0), rec=ok.reduce((s,k)=>s+R[k].recent,0);
+  const tor=ok.reduce((s,k)=>s+R[k].torrent,0), ppA=ok.filter(k=>R[k].ppri==='approuvé').length, ppP=ok.filter(k=>R[k].ppri==='prescrit').length;
+  const tri=ok.filter(k=>R[k].tri), azi=ok.filter(k=>R[k].azi).length, sans=ok.filter(k=>!R[k].n).length;
+  const liste=a=>a.length<=4?a.map(nom).join(', '):a.slice(0,3).map(nom).join(', ')+` et ${a.length-3} autres`;
+  cap.innerHTML=`<b>Risque inondation.</b> ${tot} arrêté${tot>1?'s':''} de catastrophe naturelle depuis 1982 sur le territoire${tot?`, dont ${rec} depuis 2016`:''}${tor?` et ${tor} pour lave torrentielle`:''}${sans?` ; ${sans} commune${sans>1?'s':''} sans aucun arrêté`:''}. `+
+    `Plan de prévention du risque inondation : approuvé dans ${ppA} commune${ppA>1?'s':''}${ppP?`, prescrit dans ${ppP}`:''} sur ${ok.length}. `+
+    (tri.length?`Territoire à risque important d'inondation : ${liste(tri)}. `:'')+(azi?`${azi} commune${azi>1?'s':''} dans un atlas des zones inondables.`:'')+
+    (ok.length<ins.length?` (${ins.length-ok.length} commune${ins.length-ok.length>1?'s':''} sans réponse de Géorisques.)`:'');
+  fitA4();
+}
 function render(nom,com,cal){
   DERNIERE={nom,com,cal};
   const years=[]; for(let y=N0;y<=LAST;y++) years.push(y);
@@ -951,7 +1021,7 @@ function render(nom,com,cal){
   const sgn=v=>(v>=0?'+':'−')+f0(Math.abs(v));
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
-  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td></tr>`).join('');
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td></tr>`).join('');
   $('sheet').innerHTML=`
     <h1>${nom}</h1>
     <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
@@ -963,9 +1033,10 @@ function render(nom,com,cal){
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
     <table>
-      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th></tr>
+      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>T. moy. normale (°C)</th><th>Écart ${R0}–${LAST}</th>${cal?'<th>Pluie+neige /an (mm)*</th>':''}<th>Neige /an normale (cm)*</th><th>Neige /an ${R0}–${LAST} (cm)*</th><th>Jours de gel normale</th><th>Jours de gel ${R0}–${LAST}</th><th>Jours ≥ 30 °C ${R0}–${LAST}</th><th>Arrêtés inondation depuis 1982**</th></tr>
       ${rows}
     </table>
+    <div class="cap" id="inondCap">Risque inondation : interrogation de Géorisques…</div>
     <div class="charts">
       <div><h2>Température annuelle du territoire</h2>${lineChart(years,terr,tN,'°')}
         <div class="cap">Barres : écart de chaque année à la normale 1991–2020 (pointillés). Trait noir : moyenne sur 5 ans.</div></div>
@@ -990,11 +1061,13 @@ function render(nom,com,cal){
     </div>
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au chef-lieu de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
       * Pluie et neige : voir l'encadré ci-dessus.<br>
+      ** Arrêtés inondation : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. Source : Géorisques, base GASPAR (ministère de la Transition écologique).<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
   $('sheet').classList.add('on');
   fitA4();
   if($('oFutur').checked) setTimeout(completerHorizon,0);
+  setTimeout(()=>majInond(com),0);
 }
 
 $('oFutur').addEventListener('change',()=>{ HECHEC=false; majNav(); if(DERNIERE) render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal); });
