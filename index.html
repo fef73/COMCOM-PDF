@@ -970,7 +970,21 @@ function grAnnee(o){
   }
   return first;
 }
-async function inondation(insee){
+// Plans de prévention : fichier préparé par preparer-ppr.html (liste nationale Géorisques, détail par plan)
+const PPR_URL='donnees/ppr-savoie.json'; let PPR_P=null;
+const pprData=()=>PPR_P||(PPR_P=fetch(PPR_URL,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null));
+const PPR_RANG={'approuvé':3,'prescrit':2};
+function pprFor(D,insee){
+  if(!D||!D.communes) return null;
+  const couvert=(D.departements||[]).includes(String(insee).slice(0,2)), l=D.communes[insee]||[];
+  if(!l.length) return couvert?{etat:'aucun',autres:[]}:null;
+  const avecI=l.filter(e=>e.inond&&PPR_RANG[e.inond.etat]).sort((a,b)=>PPR_RANG[b.inond.etat]-PPR_RANG[a.inond.etat]||String(b.inond.date).localeCompare(String(a.inond.date)));
+  const autres=l.filter(e=>!avecI.includes(e)&&e.global&&PPR_RANG[e.global.etat]).map(e=>e.nom);
+  if(!avecI.length) return {etat:'aucun',autres};
+  const e=avecI[0]; return {etat:e.inond.etat,date:e.inond.date,nom:e.nom,modele:e.modele,lien:e.lien,autres};
+}
+async function inondation(insee){ const v=await inondBase(insee); if(!v) return v; return {...v, ppr:pprFor(await pprData(),insee)}; }
+async function inondBase(insee){
   if(!insee) return null;
   try{ const c=JSON.parse(localStorage.getItem(INOND_KEY+insee)||'null'); if(c&&Date.now()-c.t<INOND_TTL) return c.v; }catch(e){}
   const [cat,rsq,tri,azi]=await Promise.allSettled(['catnat','risques','tri','azi'].map(p=>grGet(p,insee)));
@@ -1018,6 +1032,8 @@ async function majInond(com){
     (rq.length?`Risque inondation recensé par l'État dans ${rec2} commune${rec2>1?'s':''} sur ${rq.length}`+
       [['crue torrentielle'],['lave torrentielle'],['ruissellement et coulée de boue'],['crue lente'],['remontée de nappe']].map(([t])=>nT(t)?`${t} : ${nT(t)}`:'').filter(Boolean).reduce((a,x,i)=>a+(i?', ':' (')+x,'')+(rq.some(k=>R[k].types.length)?')':'')+
       (bar?` ; rupture de barrage : ${bar} commune${bar>1?'s':''}`:'')+'. ':'')+
+    (()=>{ const pp=ok.filter(k=>R[k].ppr); if(!pp.length) return ''; const A=pp.filter(k=>R[k].ppr.etat==='approuvé').length, P=pp.filter(k=>R[k].ppr.etat==='prescrit').length;
+      return `Plan de prévention couvrant l'inondation : approuvé dans ${A} commune${A>1?'s':''}${P?`, prescrit dans ${P}`:''} sur ${pp.length}. `; })()+
     (tri.length?`Territoire à risque important d'inondation : ${liste(tri)}. `:'')+(azi?`${azi} commune${azi>1?'s':''} dans un atlas des zones inondables.`:'')+
     (ok.length<ins.length?` (${ins.length-ok.length} commune${ins.length-ok.length>1?'s':''} sans réponse de Géorisques.)`:'');
   fitA4();
