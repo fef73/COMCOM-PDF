@@ -843,7 +843,7 @@ function render(nom,com,stations){
     <td class="${cls(c.S.pm25,OMS.pm25a)}">${f1(c.S.pm25)}</td><td class="${cls(c.S.pm10,OMS.pm10a)}">${f1(c.S.pm10)}</td><td class="${cls(c.S.no2,OMS.no2a)}">${f1(c.S.no2)}</td>
     <td>${f0(c.S.d25)}</td><td>${f0(c.S.do3)}</td><td>${f0(c.S.c[2]+c.S.c[3]+c.S.c[4]+c.S.c[5])}</td>
     ${radOk?`<td class="${c.rad===3?'r3':''}">${ok(c.rad)?c.rad:'–'}</td>`:''}</tr>`).join('');
-  $('sheet').innerHTML=`
+  $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
     <div class="sub">Qualité de l'air${refs.length?' · recalée sur les mesures':''} · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m · période ${per}</div>
     <div class="kpis">
@@ -875,16 +875,24 @@ function render(nom,com,stations){
       ${radOk?`<p><b>Radon.</b> Gaz radioactif naturel issu du sous-sol, il s'accumule dans les bâtiments mal ventilés. ${r3.length?`${r3.length} commune${r3.length>1?'s sont':' est'} en potentiel 3 (significatif) : une mesure dans les habitations y est recommandée, et obligatoire dans les établissements recevant du public comme les écoles.`:'Aucune commune de la fiche n\'est en potentiel 3 (significatif).'}</p>`:''}
     </div>
     <div class="foot">Données : modèle CAMS Europe (Copernicus / ECMWF, maille ≈ 11 km) via Open-Meteo, au chef-lieu de chaque commune, ${per} ; indice européen de qualité de l'air (Agence européenne pour l'environnement) ; seuils OMS 2021.${stL.length?' Stations : statistiques annuelles officielles (Agence européenne pour l\'environnement, réseau Atmo Auvergne-Rhône-Alpes).':''}${radOk?' Radon : zonage officiel ASNR (arrêté du 27 juin 2018) via Géorisques.':''} Communes : geo.api.gouv.fr.<br>
-      Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div>`;
+      Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
   fitA4();
 }
 
 // Réduit légèrement la fiche si elle dépasse une page A4
+window.addEventListener('beforeprint',()=>fitA4());
+if(document.fonts) document.fonts.addEventListener('loadingdone',()=>fitA4());
 function fitA4(){
-  const s=$('sheet'); s.style.zoom=1;
-  const max=297*96/25.4, h=s.scrollHeight;
-  if(h>max) s.style.zoom=(max/h).toFixed(3);
+  // Tient sur une page A4 dans tous les navigateurs : le contenu (#shz) est réduit par transform (et non par zoom,
+  // mal géré à l'impression par Firefox), en gardant toute la largeur de la page.
+  const s=$('sheet'), z=$('shz'); if(!s||!z) return;
+  z.style.transform=''; z.style.width=''; s.style.height='297mm'; s.style.overflow='hidden';
+  const cs=getComputedStyle(s), avail=297*96/25.4-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-2;
+  if(z.scrollHeight<=avail) return;
+  const fits=k=>{ z.style.width=(100/k)+'%'; return z.scrollHeight*k<=avail; };
+  let lo=0.4, hi=1; for(let i=0;i<12;i++){ const m=(lo+hi)/2; if(fits(m)) lo=m; else hi=m; }
+  z.style.width=(100/lo)+'%'; z.style.transformOrigin='top left'; z.style.transform=`scale(${lo.toFixed(4)})`;
 }
 </script>
 </body>
