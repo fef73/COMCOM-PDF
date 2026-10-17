@@ -939,7 +939,7 @@ let DERNIERE=null;
 // Arrêtés de catastrophe naturelle « inondation / coulée de boue / lave torrentielle » depuis 1982,
 // plan de prévention des risques inondation (PPRI), territoire à risque important (TRI), atlas des zones inondables (AZI).
 const GR_API='https://georisques.gouv.fr/api/v1/gaspar/';
-const INOND_KEY='inond-v1-', INOND_TTL=30*864e5;
+const INOND_KEY='inond-v2-', INOND_TTL=30*864e5;
 const RX_INOND=/inond|crue|coul[ée]es? de boue|torrent|ruissel|submersion/i;
 const grVals=o=>{const out=[];(function w(x){if(x==null)return;if(typeof x==='string')out.push(x);else if(typeof x==='object')Object.values(x).forEach(w);})(o);return out.join(' | ');};
 async function grGet(path,insee){
