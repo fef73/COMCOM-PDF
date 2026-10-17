@@ -67,18 +67,30 @@ $('go').onclick=async()=>{
   try{
     // 1. liste nationale
     log('Lecture de la liste nationale des plans…');
-    let premiere=await get(`${API}?pageSize=100&pageNumber=0`);
-    const taille=premiere.pageSize||10, pages=premiere.totalPages||1;
-    log(`${premiere.totalElements} plans en France, ${pages} pages de ${taille}.`);
+    // l'API ne documente pas ses paramètres de pagination : on essaie plusieurs écritures
+    // et on garde celle qui renvoie vraiment une autre page.
+    const VARIANTES=[['page','size'],['pageNumber','pageSize'],['page','page_size'],['page_number','page_size']];
+    const url=(v,p,t)=>`${API}?${v[0]}=${p}&${v[1]}=${t}`;
+    const id0=j=>(j&&j.content&&j.content[0]&&j.content[0].idGaspar)||null;
+    let premiere=null, V=null;
+    for(const v of VARIANTES){
+      const a=await get(url(v,0,100)), b=await get(url(v,1,100));
+      log(`  essai ${v[0]}/${v[1]} : ${(a.content||[]).length} plans par page, page 1 ${id0(b)&&id0(b)!==id0(a)?'différente':'identique'}`);
+      if(id0(b)&&id0(b)!==id0(a)){ premiere=a; V=v; break; }
+    }
+    if(!V) throw new Error("impossible de passer à la page suivante de la liste Géorisques (pagination ignorée par l'API)");
+    const taille=(premiere.content||[]).length||premiere.pageSize||10, pages=Math.ceil((premiere.totalElements||taille)/taille);
+    log(`${premiere.totalElements} plans en France, ${pages} pages de ${taille} (paramètres ${V[0]}/${V[1]}).`);
     const garde=[]; const t0=Date.now();
     for(let p=0;p<pages&&!STOP;p++){
-      const j=p===0?premiere:await get(`${API}?pageSize=${taille}&pageNumber=${p}`);
+      const j=p===0?premiere:await get(url(V,p,taille));
       (j.content||[]).forEach(x=>{ const d=x.departementPilote&&x.departementPilote.codeDepartementPilote; if(deps.includes(d)) garde.push(x); });
       $('bar').style.width=(50*(p+1)/pages)+'%';
       const reste=(Date.now()-t0)/(p+1)*(pages-p-1)/1000; $('eta').textContent=`liste : page ${p+1}/${pages} · ${garde.length} plans gardés · ≈ ${Math.ceil(reste/60)} min restantes`;
       if(p%3==2) await pause(150);
     }
     if(STOP) throw new Error('arrêté');
+    if(!garde.length) throw new Error('aucun plan trouvé pour '+deps.join(', ')+' : fichier non produit');
     log(`${garde.length} plans pilotés par ${deps.join(', ')}.`);
     // 2. détail de chaque plan
     const C={}, t1=Date.now(); let n=0;
