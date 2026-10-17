@@ -939,7 +939,7 @@ let DERNIERE=null;
 // Arrêtés de catastrophe naturelle « inondation / coulée de boue / lave torrentielle » depuis 1982,
 // plan de prévention des risques inondation (PPRI), territoire à risque important (TRI), atlas des zones inondables (AZI).
 const GR_API='https://georisques.gouv.fr/api/v1/gaspar/';
-const INOND_KEY='inond-v2-', INOND_TTL=30*864e5;
+const INOND_KEY='inond-v3-', INOND_TTL=30*864e5;
 const RX_INOND=/inond|crue|coul[ée]es? de boue|torrent|ruissel|submersion/i;
 const grVals=o=>{const out=[];(function w(x){if(x==null)return;if(typeof x==='string')out.push(x);else if(typeof x==='object')Object.values(x).forEach(w);})(o);return out.join(' | ');};
 async function grGet(path,insee){
@@ -973,16 +973,19 @@ function grAnnee(o){
 async function inondation(insee){
   if(!insee) return null;
   try{ const c=JSON.parse(localStorage.getItem(INOND_KEY+insee)||'null'); if(c&&Date.now()-c.t<INOND_TTL) return c.v; }catch(e){}
-  const [cat,ppr,tri,azi]=await Promise.allSettled(['catnat','pprn','tri','azi'].map(p=>grGet(p,insee)));
+  const [cat,rsq,tri,azi]=await Promise.allSettled(['catnat','risques','tri','azi'].map(p=>grGet(p,insee)));
   if(cat.status!=='fulfilled') return null;
   const ev=cat.value.filter(o=>RX_INOND.test(grVals(o)));
   const ys=ev.map(grAnnee).filter(Boolean);
-  const pp=ppr.status==='fulfilled'?ppr.value.filter(o=>RX_INOND.test(grVals(o))):null;
-  const approuve=o=>/approuv/i.test(grVals(o))||Object.entries(o).some(([k,v])=>/approb/i.test(k)&&v);
+  // risques recensés dans la commune (codes GASPAR : 11x = inondation, 23 = rupture de barrage)
+  const det=rsq.status==='fulfilled'?rsq.value.flatMap(o=>o.risques_detail||[]):null;
+  const COURT={'112':'crue lente','113':'crue torrentielle','114':'ruissellement et coulée de boue','115':'lave torrentielle','116':'submersion marine','117':'remontée de nappe'};
+  const types=det==null?null:det.filter(r=>/^11\d$/.test(r.num_risque)).map(r=>COURT[r.num_risque]||String(r.libelle_risque_long||'').replace(/^Par (une |un )?/i,'').toLowerCase());
+  const inondRec=det==null?null:det.some(r=>/^11\d*$/.test(r.num_risque));
   const v={
     n:ev.length, recent:ys.filter(y=>y>=2016).length, last:ys.length?Math.max(...ys):null, first:ys.length?Math.min(...ys):null,
     torrent:ev.filter(o=>/torrent/i.test(grVals(o))).length,
-    ppri:pp==null?null:(pp.length?(pp.some(approuve)?'approuvé':'prescrit'):'aucun'),
+    types, inondRec, barrage:det==null?null:det.some(r=>r.num_risque==='23'),
     tri:tri.status==='fulfilled'?tri.value.length>0:null,
     azi:azi.status==='fulfilled'?azi.value.length>0:null
   };
@@ -999,11 +1002,14 @@ async function majInond(com){
   const ok=ins.filter(k=>R[k]), cap=$('inondCap'); if(!cap) return;
   if(!ok.length){ cap.textContent="Risque inondation : Géorisques n'a pas répondu, la colonne est vide. Régénérez la fiche dans un instant."; fitA4(); return; }
   const nom=k=>(com.find(c=>c.insee===k)||{}).nom||k, tot=ok.reduce((s,k)=>s+R[k].n,0), rec=ok.reduce((s,k)=>s+R[k].recent,0);
-  const tor=ok.reduce((s,k)=>s+R[k].torrent,0), ppA=ok.filter(k=>R[k].ppri==='approuvé').length, ppP=ok.filter(k=>R[k].ppri==='prescrit').length;
+  const tor=ok.reduce((s,k)=>s+R[k].torrent,0), rq=ok.filter(k=>R[k].types!=null);
+  const nT=t=>rq.filter(k=>R[k].types.includes(t)).length, rec2=rq.filter(k=>R[k].inondRec).length, bar=rq.filter(k=>R[k].barrage).length;
   const tri=ok.filter(k=>R[k].tri), azi=ok.filter(k=>R[k].azi).length, sans=ok.filter(k=>!R[k].n).length;
   const liste=a=>a.length<=4?a.map(nom).join(', '):a.slice(0,3).map(nom).join(', ')+` et ${a.length-3} autres`;
   cap.innerHTML=`<b>Risque inondation.</b> ${tot} arrêté${tot>1?'s':''} de catastrophe naturelle depuis 1982 sur le territoire${tot?`, dont ${rec} depuis 2016`:''}${tor?` et ${tor} pour lave torrentielle`:''}${sans?` ; ${sans} commune${sans>1?'s':''} sans aucun arrêté`:''}. `+
-    (ok.some(k=>R[k].ppri!=null)?`Plan de prévention du risque inondation : approuvé dans ${ppA} commune${ppA>1?'s':''}${ppP?`, prescrit dans ${ppP}`:''} sur ${ok.length}. `:'')+
+    (rq.length?`Risque inondation recensé par l'État dans ${rec2} commune${rec2>1?'s':''} sur ${rq.length}`+
+      [['crue torrentielle'],['lave torrentielle'],['ruissellement et coulée de boue'],['crue lente']].map(([t])=>nT(t)?`${t} : ${nT(t)}`:'').filter(Boolean).reduce((a,x,i)=>a+(i?', ':' (')+x,'')+(rq.some(k=>R[k].types.length)?')':'')+
+      (bar?` ; rupture de barrage : ${bar} commune${bar>1?'s':''}`:'')+'. ':'')+
     (tri.length?`Territoire à risque important d'inondation : ${liste(tri)}. `:'')+(azi?`${azi} commune${azi>1?'s':''} dans un atlas des zones inondables.`:'')+
     (ok.length<ins.length?` (${ins.length-ok.length} commune${ins.length-ok.length>1?'s':''} sans réponse de Géorisques.)`:'');
   fitA4();
