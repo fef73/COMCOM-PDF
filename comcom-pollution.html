@@ -98,6 +98,13 @@
   th:first-child,td:first-child{text-align:left}
   th{font-size:7.6pt;color:var(--mute);font-weight:600;vertical-align:bottom;white-space:normal}
   td.hot{color:var(--warm);font-weight:600}
+  table.tc th,table.tc td{text-align:center}
+  table.tc th:first-child,table.tc td:first-child{text-align:left}
+  tr.grp th{border-bottom-color:transparent}
+  tr.grp th[colspan],tr.grp th:not([rowspan]){text-align:center;border-bottom:1px solid #aab4bf;padding-bottom:1px}
+  tr.grp th[rowspan]{border-bottom:1px solid var(--line)}
+  tr.per th{font-weight:500;padding-top:1px}
+  tr.per small{font-weight:400;font-size:6.8pt}
   .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   svg{width:100%;height:auto;display:block}
   .cap{font-size:7.8pt;color:var(--mute);margin-top:2px}
@@ -833,8 +840,9 @@ function render(nom,com,stations){
   const moyMes=(s,p)=>s.moy&&ok(s.moy[p])?s.moy[p]:(s.mes[p]?mean(Object.values(s.mes[p])):NaN);
   const xk=(s,p)=>s.k&&s.k[p]&&!(p==='pm25'&&s.pm25estime)?` <span style="color:var(--mute)">(modèle ${f1(s.cams[p])})</span>`:'';
   const stTable=stL.length?`<h2>Stations de mesure à proximité</h2>
-    <table>
-      <tr><th>Station</th><th>Type</th><th>Station de référence pour</th><th>Distance (km)</th><th>Alt. (m)</th><th>NO₂ moy. mesuré (µg/m³)</th><th>PM10 moy. mesuré (µg/m³)</th><th>PM2,5 moy. mesuré (µg/m³)</th><th>Jours /an ozone &gt; 120 mesurés</th></tr>
+    <table class="tc">
+      <tr class="grp"><th rowspan="2">Station</th><th rowspan="2">Type</th><th rowspan="2">Référence pour</th><th rowspan="2">Dist. (km)</th><th rowspan="2">Alt. (m)</th><th colspan="3">Moyenne mesurée (µg/m³)</th><th>Jours /an</th></tr>
+      <tr class="per"><th>NO₂</th><th>PM10</th><th>PM2,5</th><th>ozone &gt; 120</th></tr>
       ${stL.map(s=>`<tr><td>${s.nom}</td><td>${s.fond?'fond':'trafic'}${/urban/i.test(s.zone)&&!/sub/i.test(s.zone)?' urbain':/sub/i.test(s.zone)?' périurbain':' rural'}</td><td style="text-align:left;white-space:normal">${s.communes.length?s.communes.slice(0,3).join(', ')+(s.communes.length>3?` +${s.communes.length-3}`:''):'–'}</td><td>${f0(s.d)}</td><td>${f0(s.alt)}</td>
         <td>${f1(moyMes(s,'no2'))}${xk(s,'no2')}</td><td>${f1(moyMes(s,'pm10'))}${xk(s,'pm10')}</td><td>${f1(moyMes(s,'pm25'))}${xk(s,'pm25')}</td><td>${s.mes.o3j?f0(mean(Object.values(s.mes.o3j))):'–'}</td></tr>`).join('')}
     </table>`:'';
@@ -853,9 +861,9 @@ function render(nom,com,stations){
       <div class="kpi"><b>${domTot?{pm25:'PM2,5',pm10:'PM10',no2:'NO₂',o3:'O₃'}[domP]:'–'}</b><span>${domTot?`polluant en cause ${f0(dom[domP]/domTot*100)} % des jours dégradés`:'aucun jour dégradé sur la période'}</span></div>
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
-    <table>
-      <tr><th>Commune</th><th>Alt. (m)</th><th>Hab.</th><th>PM2,5 moy. (µg/m³) · OMS 5</th><th>PM10 moy. (µg/m³) · OMS 15</th><th>NO₂ moy. (µg/m³) · OMS 10</th>
-        <th>Jours /an PM2,5 &gt; 15</th><th>Jours /an ozone &gt; 100</th><th>Jours /an air dégradé ou pire</th>${radOk?'<th>Potentiel radon (1 à 3)</th>':''}</tr>
+    <table class="tc">
+      <tr class="grp"><th rowspan="2">Commune</th><th rowspan="2">Alt. (m)</th><th rowspan="2">Hab.</th><th colspan="3">Moyenne annuelle (µg/m³)</th><th colspan="3">Jours par an</th>${radOk?'<th rowspan="2">Radon (1 à 3)</th>':''}</tr>
+      <tr class="per"><th>PM2,5<br><small>OMS 5</small></th><th>PM10<br><small>OMS 15</small></th><th>NO₂<br><small>OMS 10</small></th><th>PM2,5 &gt; 15</th><th>ozone &gt; 100</th><th>air dégradé ou pire</th></tr>
       ${rows}
     </table>
     ${stTable}
