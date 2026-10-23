@@ -1065,10 +1065,10 @@ function render(nom,com,cal){
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
   const PER=`${String(R0).slice(2)}–${String(LAST).slice(2)}`;
-  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td class="lits" data-i="${c.insee}">…</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
   $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
-    <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''} · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
+    <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''}<span id="litsTot"></span> · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
     <div class="kpis">
       <div class="kpi"><b>${f1(tN)} °C</b><span>Température moyenne du territoire, normale 1991–2020</span></div>
       <div class="kpi"><b style="color:var(--warm)">+${f1(tR-tN)} °C</b><span>Écart ${R0}–${LAST} par rapport à la normale</span></div>
@@ -1077,7 +1077,7 @@ function render(nom,com,cal){
     </div>
     <h2>Les communes, de la plus basse à la plus haute</h2>
     <table class="tc">
-      <tr class="grp"><th rowspan="2">Commune</th><th rowspan="2">Alt. (m)</th><th rowspan="2">Hab.</th><th colspan="2">Temp. (°C)</th>${cal?'<th rowspan="2">Pluie+ neige (mm/an)*</th>':''}<th colspan="2">Neige (cm/an)*</th><th colspan="2">Jours de gel /an</th><th>≥ 30 °C</th><th rowspan="2">CatNat inond.**</th><th rowspan="2">PPRi**</th></tr>
+      <tr class="grp"><th rowspan="2">Commune</th><th rowspan="2">Alt. (m)</th><th rowspan="2">Hab.</th><th rowspan="2">Lits tour.***</th><th colspan="2">Temp. (°C)</th>${cal?'<th rowspan="2">Pluie+ neige (mm/an)*</th>':''}<th colspan="2">Neige (cm/an)*</th><th colspan="2">Jours de gel /an</th><th>≥ 30 °C</th><th rowspan="2">CatNat inond.**</th><th rowspan="2">PPRi**</th></tr>
       <tr class="per"><th>91–20</th><th>écart ${PER}</th><th>91–20</th><th>${PER}</th><th>91–20</th><th>${PER}</th><th>${PER}</th></tr>
       ${rows}
     </table>
@@ -1107,13 +1107,27 @@ function render(nom,com,cal){
     <div class="foot">Données : réanalyses Copernicus / ECMWF via Open-Meteo, au chef-lieu de chaque commune : températures ERA5-Land (maille ≈ 9 km) corrigées selon l'altitude, précipitations ERA5 (maille ≈ 25 km)${cal?", recalées sur les postes Météo-France (meteo.data.gouv.fr, licence Etalab 2.0)":''}. Communes : geo.api.gouv.fr.<br>
       * Pluie et neige : voir l'encadré ci-dessus.<br>
       ** CatNat inond. : nombre d'arrêtés de catastrophe naturelle (inondations, coulées de boue, laves torrentielles) publiés pour la commune depuis 1982 et, entre parenthèses, l'année du dernier événement ; en rouge, au moins un depuis 2016. PPRi : plan de prévention des risques inondation, année d'approbation du plan le plus récent couvrant l'inondation (PPRi ou plan multirisques), « prescrit » s'il est en cours d'élaboration, « non » s'il n'y en a pas. Source : Géorisques, base GASPAR (ministère de la Transition écologique) ; plan de prévention et détail de chaque commune sur georisques.gouv.fr, « Ma commune face aux risques ».<br>
-      Colonnes « 91–20 » : normale 1991–2020 ; « ${PER} » : moyenne ${R0}–${LAST} (écart de température par rapport à la normale).<br>
+      <span id="litsFoot"></span>Colonnes « 91–20 » : normale 1991–2020 ; « ${PER} » : moyenne ${R0}–${LAST} (écart de température par rapport à la normale).<br>
       Jours de gel (minimum sous 0 °C) et jours ≥ 30 °C (maximum) : moyennes par an sur la période indiquée, d'où les décimales (0,3 = environ 3 jours en 10 ans).<br>
       La normale 1991–2020 est la moyenne de référence officielle sur 30 ans. Fiche établie le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · comparateur-meteo.fr</div></div>`;
   $('sheet').classList.add('on');
   fitA4();
   if($('oFutur').checked) setTimeout(completerHorizon,0);
   setTimeout(()=>majInond(com),0);
+  setTimeout(()=>majLits(com),0);
+}
+// Lits touristiques des stations de ski (donnees/stations-ski-savoie.json, chiffres Savoie Mont Blanc)
+async function majLits(com){
+  const d=await skiData(), C=(d&&d.communes)||{}, an=new Set();
+  const litsDe=insee=>{const v=((C[insee]&&C[insee].stations)||[]).filter(s=>typeof s.litsTouristiques==='number');
+    v.forEach(s=>s.litsAnnee&&an.add(s.litsAnnee)); return v.length?v.reduce((a,s)=>a+s.litsTouristiques,0):null;};
+  document.querySelectorAll('#sheet td.lits').forEach(td=>{const v=litsDe(td.dataset.i); td.textContent=v?f0(v):'–';});
+  const tot=[...new Set(com.map(c=>c.insee))].reduce((a,i)=>a+(litsDe(i)||0),0);
+  const t=$('litsTot'), f=$('litsFoot'); if(!t||!f) return;
+  t.textContent=tot?` · ${f0(tot)} lits touristiques`:'';
+  const y=[...an].sort();
+  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée. Les hébergements hors stations ne sont pas comptés.<br>`;
+  fitA4();
 }
 
 $('oFutur').addEventListener('change',()=>{ HECHEC=false; majNav(); if(DERNIERE) render(DERNIERE.nom,DERNIERE.com,DERNIERE.cal); });
