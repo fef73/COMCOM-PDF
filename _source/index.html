@@ -433,9 +433,9 @@ async function majSki(){
   if(!L||!L.length){box.classList.remove('on'); box.innerHTML=''; return;}
   const m=v=>ok(v)?v.toLocaleString('fr-FR')+' m':'n.c.';
   box.innerHTML=`<div class="addf"><b>⛷ Stations de ski du territoire</b>
-    <span style="color:var(--text-lo)">Cochez une station et indiquez l'altitude à laquelle la calculer (front de neige, milieu ou haut du domaine). Repères : altitudes basse et haute des remontées.</span>
+    <span style="color:var(--text-lo)">Cochez une station : elle est calculée à l'altitude basse des remontées (pré-remplie), modifiable pour viser le milieu ou le haut du domaine.</span>
     ${L.map((s,i)=>`<div class="row"><label><input type="checkbox" data-s="${i}" ${skiDeja(s)?'disabled':''}> <span class="n">${s.nom}</span></label>
-      <input type="number" data-a="${i}" min="-10" max="4810" step="1" placeholder="altitude" ${skiDeja(s)?'disabled':''}> m
+      <input type="number" data-a="${i}" min="-10" max="4810" step="1" placeholder="altitude" ${ok(s.altitudeBasse)?`value="${s.altitudeBasse}"`:''} ${skiDeja(s)?'disabled':''}> m
       <small>bas ${ok(s.altitudeBasse)?`<span class="lnk" data-f="${i}" data-v="${s.altitudeBasse}">${m(s.altitudeBasse)}</span>`:'n.c.'}
       · haut ${ok(s.altitudeHaute)?`<span class="lnk" data-f="${i}" data-v="${s.altitudeHaute}">${m(s.altitudeHaute)}</span>`:'n.c.'}
       ${s.domaineSkiable&&!/^Indépendant/.test(s.domaineSkiable)?' · '+s.domaineSkiable:''}${skiDeja(s)?' · déjà dans la liste':''}</small></div>`).join('')}
