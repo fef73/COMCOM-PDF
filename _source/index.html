@@ -1065,7 +1065,9 @@ function render(nom,com,cal){
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
   const PER=`${String(R0).slice(2)}–${String(LAST).slice(2)}`;
-  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td class="lits" data-i="${c.insee}" data-st="${c.ext?1:0}">…</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
+  // Habitants affichés une seule fois par commune, sur la ligne de la commune (les lignes de station disent « idem »)
+  const popRow=new Map(); com.forEach(c=>{const r=popRow.get(c.insee); if(!r||(r.ext&&!c.ext)) popRow.set(c.insee,c);});
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${popRow.get(c.insee)===c?f0(c.pop):'idem'}</td><td class="lits" data-i="${c.insee}" data-st="${c.ext?1:0}">…</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
   $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
     <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''}<span id="litsTot"></span> · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
@@ -1129,7 +1131,7 @@ async function majLits(com){
   const t=$('litsTot'), f=$('litsFoot'); if(!t||!f) return;
   t.textContent=tot?` · ${f0(tot)} lits touristiques`:'';
   const y=[...an].sort();
-  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée ; « idem » : chiffre déjà compté sur l'autre ligne de la commune. Les hébergements hors stations ne sont pas comptés.<br>`;
+  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée ; « idem » (habitants et lits) : chiffre déjà donné sur l'autre ligne de la commune. Les hébergements hors stations ne sont pas comptés.<br>`;
   fitA4();
 }
 
