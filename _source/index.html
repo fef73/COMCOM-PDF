@@ -1065,7 +1065,7 @@ function render(nom,com,cal){
   const hottest=years[terr.indexOf(Math.max(...terr))];
   const now=new Date();
   const PER=`${String(R0).slice(2)}–${String(LAST).slice(2)}`;
-  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td class="lits" data-i="${c.insee}">…</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
+  const rows=com.map(c=>`<tr><td>${c.nom}</td><td>${f0(c.alt)}</td><td>${f0(c.pop)}</td><td class="lits" data-i="${c.insee}" data-st="${c.ext?1:0}">…</td><td>${f1(c.tN)}</td><td class="${c.dT>=1?'hot':''}">+${f1(c.dT)}</td>${cal?`<td>${f0(c.pN)}</td>`:''}<td>${f0(c.sN)}</td><td>${f0(c.sR)}</td><td>${f0(c.gN)}</td><td>${f0(c.gR)}</td><td>${f1(c.hR)}</td><td class="ino" data-i="${c.insee}">…</td><td class="ppr" data-i="${c.insee}">…</td></tr>`).join('');
   $('sheet').innerHTML=`<div id="shz">
     <h1>${nom}</h1>
     <div class="sub">Fiche climat intercommunale · ${nbC} commune${nbC>1?'s':''} · ${f0(pop)} habitant${pop>1?'s':''}<span id="litsTot"></span> · altitude de ${f0(Math.min(...alts))} à ${f0(Math.max(...alts))} m</div>
@@ -1121,12 +1121,15 @@ async function majLits(com){
   const d=await skiData(), C=(d&&d.communes)||{}, an=new Set();
   const litsDe=insee=>{const v=((C[insee]&&C[insee].stations)||[]).filter(s=>typeof s.litsTouristiques==='number');
     v.forEach(s=>s.litsAnnee&&an.add(s.litsAnnee)); return v.length?v.reduce((a,s)=>a+s.litsTouristiques,0):null;};
-  document.querySelectorAll('#sheet td.lits').forEach(td=>{const v=litsDe(td.dataset.i); td.textContent=v?f0(v):'–';});
+  // Une commune sur plusieurs lignes (station ajoutée) : chiffre affiché une seule fois, sur la ligne de la station de préférence
+  const tds=[...document.querySelectorAll('#sheet td.lits')], vu=new Map();
+  tds.forEach(td=>{const i=td.dataset.i; if(!vu.has(i)||(td.dataset.st==='1'&&vu.get(i).dataset.st!=='1')) vu.set(i,td);});
+  tds.forEach(td=>{const v=litsDe(td.dataset.i); td.textContent=!v?'–':vu.get(td.dataset.i)===td?f0(v):'idem';});
   const tot=[...new Set(com.map(c=>c.insee))].reduce((a,i)=>a+(litsDe(i)||0),0);
   const t=$('litsTot'), f=$('litsFoot'); if(!t||!f) return;
   t.textContent=tot?` · ${f0(tot)} lits touristiques`:'';
   const y=[...an].sort();
-  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée. Les hébergements hors stations ne sont pas comptés.<br>`;
+  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée ; « idem » : chiffre déjà compté sur l'autre ligne de la commune. Les hébergements hors stations ne sont pas comptés.<br>`;
   fitA4();
 }
 
