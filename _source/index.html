@@ -1140,12 +1140,12 @@ async function majLits(com){
   // Une commune sur plusieurs lignes (station ajoutée) : chiffre affiché une seule fois, sur la ligne de la station de préférence
   const tds=[...document.querySelectorAll('#sheet td.lits')], vu=new Map();
   tds.forEach(td=>{const i=td.dataset.i; if(!vu.has(i)||(td.dataset.st==='1'&&vu.get(i).dataset.st!=='1')) vu.set(i,td);});
-  tds.forEach(td=>{const v=litsDe(td.dataset.i); td.textContent=!v?'–':vu.get(td.dataset.i)===td?f0(v):'idem';});
+  tds.forEach(td=>{const v=litsDe(td.dataset.i); td.textContent=!v?'–':vu.get(td.dataset.i)===td?f0(v):'';});
   const tot=[...new Set(com.map(c=>c.insee))].reduce((a,i)=>a+(litsDe(i)||0),0);
   const t=$('litsTot'), f=$('litsFoot'); if(!t||!f) return;
   t.textContent=tot?` · ${f0(tot)} lits touristiques`:'';
   const y=[...an].sort();
-  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée ; « idem » (habitants et lits) : chiffre déjà donné sur l'autre ligne de la commune. Les hébergements hors stations ne sont pas comptés.<br>`;
+  f.innerHTML=`*** Lits tour. : lits touristiques des stations de ski de la commune (Savoie Mont Blanc${y.length?', données '+(y.length>1?y[0]+' à '+y[y.length-1]:y[0]):''}) ; « – » : pas de station recensée ; lits d'une commune comptés sur la ligne de sa station ; « idem » (habitants) : chiffre déjà donné sur la ligne de la commune. Les hébergements hors stations ne sont pas comptés.<br>`;
   fitA4();
 }
 
